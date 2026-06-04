@@ -3,7 +3,7 @@ import { records } from "@/data/records";
 import type { EnrichedMatch, FollowUp, MatchResult } from "@/lib/types";
 
 const MODEL = "claude-sonnet-4-6";
-const MAX_MATCHES = 10;
+const MAX_MATCHES = 6;
 
 /**
  * Compact view of the dataset sent to the model for ranking. Heavy fields
