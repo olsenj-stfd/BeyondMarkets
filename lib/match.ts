@@ -119,7 +119,7 @@ export async function matchCompany(
 ): Promise<{ matches: EnrichedMatch[]; followUps: FollowUp[] }> {
   const client = new Anthropic();
 
-  const message = await client.messages.create({
+  const stream = client.messages.stream({
     model: MODEL,
     max_tokens: 8192,
     system: [
@@ -138,6 +138,8 @@ export async function matchCompany(
       },
     ],
   });
+
+  const message = await stream.finalMessage();
 
   const toolUse = message.content.find(
     (block): block is Anthropic.ToolUseBlock => block.type === "tool_use",

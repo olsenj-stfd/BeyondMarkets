@@ -36,12 +36,24 @@ export default function Home() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: fullText }),
       });
-      const data = await res.json();
-      if (!res.ok) {
-        setError(data.error ?? "Request failed.");
+      const raw = await res.text();
+      let data: { matches?: EnrichedMatch[]; followUps?: FollowUp[]; error?: string } = {};
+      try {
+        data = raw ? JSON.parse(raw) : {};
+      } catch {
+        // Non-JSON body — usually a platform timeout or gateway error page.
+        setError(
+          res.status === 504
+            ? "The analysis took too long and timed out. Please try again."
+            : `Request failed (${res.status}). Please try again.`,
+        );
         return false;
       }
-      setMatches(data.matches);
+      if (!res.ok) {
+        setError(data.error ?? `Request failed (${res.status}).`);
+        return false;
+      }
+      setMatches(data.matches ?? []);
       setFollowUps(data.followUps ?? []);
       setSelections({});
       return true;
