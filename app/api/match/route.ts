@@ -27,8 +27,8 @@ export async function POST(req: Request) {
   }
 
   try {
-    const matches = await matchCompany(description.trim());
-    return NextResponse.json({ matches });
+    const { matches, followUps } = await matchCompany(description.trim());
+    return NextResponse.json({ matches, followUps });
   } catch (err) {
     console.error("match error:", err);
     const detail =

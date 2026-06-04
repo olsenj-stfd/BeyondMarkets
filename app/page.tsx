@@ -1,12 +1,19 @@
 "use client";
 
-import { useState } from "react";
-import type { EnrichedMatch } from "@/lib/types";
+import { useRef, useState } from "react";
+import type { EnrichedMatch, RecordType } from "@/lib/types";
 
 const EXAMPLES = [
   "We build hydrogen fuel-cell powertrains for heavy-duty trucks, manufacturing pilot units in the Bay Area.",
   "We're a carbon-accounting SaaS helping mid-size manufacturers measure and report Scope 1-3 emissions.",
-  "We develop a novel catalytic process that captures NOx from industrial exhaust, with a pilot line in the Central Valley.",
+  "We develop a catalytic process that captures NOx from industrial exhaust, with a pilot line in the Central Valley.",
+  "We make compostable packaging from agricultural waste, sold to California food brands.",
+];
+
+const COLUMNS: { type: RecordType; label: string; blurb: string }[] = [
+  { type: "regulation", label: "Regulations", blurb: "Rules you may need to comply with" },
+  { type: "grant", label: "Grant Opportunities", blurb: "Grants, rebates, loans & tax credits" },
+  { type: "partner", label: "Potential Partners", blurb: "Ecosystem & capital partners" },
 ];
 
 export default function Home() {
@@ -14,11 +21,14 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<EnrichedMatch[] | null>(null);
+  const [followUps, setFollowUps] = useState<string[]>([]);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   async function analyze(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
     setMatches(null);
+    setFollowUps([]);
     setLoading(true);
     try {
       const res = await fetch("/api/match", {
@@ -35,6 +45,7 @@ export default function Home() {
         );
       } else {
         setMatches(data.matches);
+        setFollowUps(data.followUps ?? []);
       }
     } catch {
       setError("Network error. Please try again.");
@@ -43,20 +54,30 @@ export default function Home() {
     }
   }
 
+  function addFollowUp(q: string) {
+    setDescription((d) => `${d.trim()}\n\n${q} `);
+    const ta = textareaRef.current;
+    if (ta) {
+      ta.focus();
+      ta.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }
+
   return (
     <main className="container">
       <div className="hero">
         <div className="tag">RegScout</div>
-        <h1>Map your regulatory & grant landscape</h1>
+        <h1>Map your regulatory, grant &amp; partner landscape</h1>
         <p>
-          Describe what your venture does. We&apos;ll surface the regulations you
-          may face and the grants you could pursue — starting with California air
-          quality and climate tech.
+          Describe what your venture does. We&apos;ll surface the federal and
+          California regulations you may face, the grants you could pursue, and
+          the partners worth knowing — sorted into three columns.
         </p>
       </div>
 
       <form onSubmit={analyze}>
         <textarea
+          ref={textareaRef}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="e.g. We build zero-emission refrigerated trailers for regional grocery fleets, assembled in California…"
@@ -83,25 +104,47 @@ export default function Home() {
 
       {error && <div className="error">{error}</div>}
 
-      {matches && (
-        <section className="results">
-          <div className="results-head">
-            {matches.length === 0
-              ? "No strong matches in the current dataset."
-              : `${matches.length} relevant ${
-                  matches.length === 1 ? "item" : "items"
-                }, most relevant first.`}
+      {followUps.length > 0 && (
+        <section className="followups">
+          <h2>Refine your results</h2>
+          <p>Answer one of these and re-run to sharpen the matches:</p>
+          <div className="followup-list">
+            {followUps.map((q, i) => (
+              <button key={i} type="button" onClick={() => addFollowUp(q)}>
+                {q}
+              </button>
+            ))}
           </div>
-          {matches.map((m) => (
-            <ResultCard key={m.id} match={m} />
-          ))}
+        </section>
+      )}
+
+      {matches && (
+        <section className="board">
+          {COLUMNS.map((col) => {
+            const items = matches.filter((m) => m.record.type === col.type);
+            return (
+              <div className="column" key={col.type}>
+                <div className="column-head">
+                  <h2>
+                    {col.label} <span className="count">{items.length}</span>
+                  </h2>
+                  <p>{col.blurb}</p>
+                </div>
+                {items.length === 0 ? (
+                  <p className="empty">No strong matches in this category.</p>
+                ) : (
+                  items.map((m) => <ResultCard key={m.id} match={m} />)
+                )}
+              </div>
+            );
+          })}
         </section>
       )}
 
       <p className="disclaimer">
-        Prototype on a hand-curated California air-quality &amp; climate dataset.
-        Summaries are for orientation only — confirm specifics against the linked
-        official source before making a compliance or funding decision.
+        Prototype on a hand-curated federal + California dataset. Summaries are for
+        orientation only — confirm specifics against the linked official source
+        before making a compliance or funding decision.
       </p>
     </main>
   );
@@ -112,53 +155,50 @@ function ResultCard({ match }: { match: EnrichedMatch }) {
   return (
     <article className="card">
       <div className="card-top">
-        <div>
-          <h3>{r.title}</h3>
-          <div className="badges">
-            <span className={`badge ${r.type === "grant" ? "grant" : "reg"}`}>
-              {r.type === "grant" ? "Grant / Incentive" : "Regulation"}
-            </span>
-            <span className="badge">{r.agencyAcronym}</span>
-            <span className="badge">{r.level}</span>
-          </div>
-        </div>
+        <h3>{r.title}</h3>
         <div className="relevance">
           {match.relevance}
-          <span>relevance</span>
+          <span>fit</span>
         </div>
       </div>
 
-      <div className="why">
-        <strong>How this affects you</strong>
-        {match.whyRelevant}
+      <div className="badges">
+        <span className="badge">{r.agencyAcronym}</span>
+        <span className="badge">{r.level}</span>
+        <span className="badge">{r.domain}</span>
       </div>
 
-      <div className="section">
-        <h4>Summary</h4>
-        <p>{r.summary}</p>
-      </div>
+      <p className="why">{match.whyRelevant}</p>
 
-      <div className="section">
-        <h4>Applies to</h4>
-        <p>{r.applicability}</p>
-      </div>
+      {match.checklist.length > 0 && (
+        <div className="checklist">
+          <h4>Checklist</h4>
+          <ul>
+            {match.checklist.map((item, i) => (
+              <li key={i}>{item}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
-      <div className="section">
-        <h4>Context</h4>
-        <p>{r.context}</p>
-      </div>
+      <details className="more">
+        <summary>More detail</summary>
+        <div className="more-body">
+          <h5>Summary</h5>
+          <p>{r.summary}</p>
+          <h5>Applies to</h5>
+          <p>{r.applicability}</p>
+          <h5>Context</h5>
+          <p>{r.context}</p>
+          <h5>How to engage with {r.agencyAcronym}</h5>
+          <p>{r.howToEngage}</p>
+          <p className="juris">{r.jurisdiction}</p>
+        </div>
+      </details>
 
-      <div className="section">
-        <h4>How to engage with {r.agencyAcronym}</h4>
-        <p>{r.howToEngage}</p>
-      </div>
-
-      <div className="card-foot">
-        <span className="badge">{r.jurisdiction}</span>
-        <a href={r.link} target="_blank" rel="noopener noreferrer">
-          Official source ↗
-        </a>
-      </div>
+      <a href={r.link} target="_blank" rel="noopener noreferrer">
+        Official source ↗
+      </a>
     </article>
   );
 }
