@@ -1,0 +1,55 @@
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { createClient } from "@/lib/supabase/server";
+import type { EnrichedMatch } from "@/lib/types";
+import Header from "@/app/components/Header";
+import { ResultBoard } from "@/app/components/Results";
+
+export const runtime = "nodejs";
+
+interface Row {
+  id: string;
+  name: string;
+  description: string;
+  matches: EnrichedMatch[];
+  created_at: string;
+}
+
+export default async function ProjectPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = await params;
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
+
+  const { data } = await supabase
+    .from("projects")
+    .select("id, name, description, matches, created_at")
+    .eq("id", id)
+    .single();
+
+  if (!data) notFound();
+  const project = data as Row;
+
+  return (
+    <main className="page">
+      <Header />
+      <section className="glass-card intro-card">
+        <Link href="/projects" className="back-link">
+          ← All projects
+        </Link>
+        <h2 className="section-title">{project.name}</h2>
+        <p className="intro-text">{project.description}</p>
+        <span className="project-date">
+          Saved {new Date(project.created_at).toLocaleDateString()}
+        </span>
+      </section>
+      <ResultBoard matches={project.matches ?? []} />
+    </main>
+  );
+}

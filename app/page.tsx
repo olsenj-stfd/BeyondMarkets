@@ -1,19 +1,17 @@
 "use client";
 
-import { useRef, useState } from "react";
-import type { EnrichedMatch, FollowUp, RecordType } from "@/lib/types";
+import { useEffect, useRef, useState } from "react";
+import Link from "next/link";
+import type { EnrichedMatch, FollowUp } from "@/lib/types";
+import { createClient } from "@/lib/supabase/client";
+import Header from "@/app/components/Header";
+import { ResultBoard } from "@/app/components/Results";
 
 const EXAMPLES = [
   "We build hydrogen fuel-cell powertrains for heavy-duty trucks, manufacturing pilot units in the Bay Area.",
   "We're a carbon-accounting SaaS helping mid-size manufacturers measure and report Scope 1-3 emissions.",
   "We develop a catalytic process that captures NOx from industrial exhaust, with a pilot line in the Central Valley.",
   "We make compostable packaging from agricultural waste, sold to California food brands.",
-];
-
-const COLUMNS: { type: RecordType; label: string; blurb: string }[] = [
-  { type: "regulation", label: "Regulations", blurb: "Rules you may need to comply with" },
-  { type: "grant", label: "Grant Opportunities", blurb: "Grants, rebates, loans & tax credits" },
-  { type: "partner", label: "Potential Partners", blurb: "Ecosystem & capital partners" },
 ];
 
 export default function Home() {
@@ -26,6 +24,21 @@ export default function Home() {
   const [followUpsOpen, setFollowUpsOpen] = useState(false);
   const [refinements, setRefinements] = useState<string[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
+
+  const [signedIn, setSignedIn] = useState(false);
+  const [saveName, setSaveName] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
+    const supabase = createClient();
+    supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
+      setSignedIn(!!session?.user),
+    );
+    return () => sub.subscription.unsubscribe();
+  }, []);
 
   async function runMatch(fullText: string) {
     setError(null);
@@ -41,7 +54,6 @@ export default function Home() {
       try {
         data = raw ? JSON.parse(raw) : {};
       } catch {
-        // Non-JSON body — usually a platform timeout or gateway error page.
         setError(
           res.status === 504
             ? "The analysis took too long and timed out. Please try again."
@@ -69,6 +81,7 @@ export default function Home() {
     e.preventDefault();
     setMatches(null);
     setRefinements([]);
+    setSaveMsg(null);
     const ok = await runMatch(description);
     if (ok) setFollowUpsOpen(true);
   }
@@ -89,20 +102,34 @@ export default function Home() {
     }
   }
 
+  async function saveProject() {
+    if (!matches) return;
+    setSaving(true);
+    setSaveMsg(null);
+    try {
+      const name = saveName.trim() || description.trim().slice(0, 60);
+      const res = await fetch("/api/projects", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, description: description.trim(), matches, followUps }),
+      });
+      if (res.ok) {
+        setSaveMsg("Saved to your projects.");
+        setSaveName("");
+      } else {
+        const data = await res.json().catch(() => ({}));
+        setSaveMsg(data.error ?? "Could not save. Please try again.");
+      }
+    } finally {
+      setSaving(false);
+    }
+  }
+
   const hasSelection = Object.keys(selections).length > 0;
 
   return (
     <main className="page">
-      <header className="header">
-        <div className="brand">
-          <div className="logo-mark" />
-          <div>
-            <h1>RegScout</h1>
-            <p className="tagline">Regulatory · Grants · Partners</p>
-          </div>
-        </div>
-        <span className="scope-pill">Federal + California</span>
-      </header>
+      <Header />
 
       <section className="glass-card intro-card">
         <p className="intro-text">
@@ -191,27 +218,34 @@ export default function Home() {
       )}
 
       {matches && (
-        <section className="board" ref={boardRef}>
-          {COLUMNS.map((col) => {
-            const items = matches.filter((m) => m.record.type === col.type);
-            return (
-              <div className={`column col-${col.type}`} key={col.type}>
-                <div className="column-head">
-                  <h2>
-                    {col.label} <span className="count">{items.length}</span>
-                  </h2>
-                  <p>{col.blurb}</p>
-                </div>
-                {items.length === 0 ? (
-                  <p className="empty">No strong matches in this category.</p>
-                ) : (
-                  items.map((m) => <ResultCard key={m.id} match={m} />)
-                )}
-              </div>
-            );
-          })}
-        </section>
+        <div className="save-bar">
+          {signedIn ? (
+            <>
+              <input
+                className="save-name"
+                value={saveName}
+                onChange={(e) => setSaveName(e.target.value)}
+                placeholder="Name this project (optional)"
+              />
+              <button
+                type="button"
+                className="pill-btn"
+                onClick={saveProject}
+                disabled={saving}
+              >
+                {saving ? "Saving…" : "Save project"}
+              </button>
+            </>
+          ) : (
+            <p className="save-hint">
+              <Link href="/login">Sign in</Link> to save this analysis as a project.
+            </p>
+          )}
+          {saveMsg && <span className="save-msg">{saveMsg}</span>}
+        </div>
       )}
+
+      {matches && <ResultBoard matches={matches} boardRef={boardRef} />}
 
       <p className="disclaimer">
         Prototype on a hand-curated federal + California dataset. Summaries and
@@ -220,80 +254,5 @@ export default function Home() {
         official source before making a compliance or funding decision.
       </p>
     </main>
-  );
-}
-
-function ResultCard({ match }: { match: EnrichedMatch }) {
-  const { record: r } = match;
-  return (
-    <article className="card">
-      <div className="card-top">
-        <h3>{r.title}</h3>
-        <div className="relevance">
-          {match.relevance}
-          <span>fit</span>
-        </div>
-      </div>
-
-      <div className="badges">
-        <span className="badge">{r.agencyAcronym}</span>
-        <span className="badge">{r.level}</span>
-        <span className="badge">{r.domain}</span>
-      </div>
-
-      <p className="why">{match.whyRelevant}</p>
-
-      {match.keyDates.length > 0 && (
-        <div className="key-dates">
-          <h4>
-            <CalendarIcon /> Key dates &amp; engagement
-          </h4>
-          <ul>
-            {match.keyDates.map((d, i) => (
-              <li key={i}>{d}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      {match.checklist.length > 0 && (
-        <div className="checklist">
-          <h4>Checklist</h4>
-          <ul>
-            {match.checklist.map((item, i) => (
-              <li key={i}>{item}</li>
-            ))}
-          </ul>
-        </div>
-      )}
-
-      <details className="more">
-        <summary>More detail</summary>
-        <div className="more-body">
-          <h5>Summary</h5>
-          <p>{r.summary}</p>
-          <h5>Applies to</h5>
-          <p>{r.applicability}</p>
-          <h5>Context</h5>
-          <p>{r.context}</p>
-          <h5>How to engage with {r.agencyAcronym}</h5>
-          <p>{r.howToEngage}</p>
-          <p className="juris">{r.jurisdiction}</p>
-        </div>
-      </details>
-
-      <a href={r.link} target="_blank" rel="noopener noreferrer">
-        Official source ↗
-      </a>
-    </article>
-  );
-}
-
-function CalendarIcon() {
-  return (
-    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <rect x="3" y="4" width="18" height="18" rx="2" />
-      <path d="M16 2v4M8 2v4M3 10h18" />
-    </svg>
   );
 }

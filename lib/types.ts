@@ -52,3 +52,13 @@ export interface MatchResponse {
 export interface EnrichedMatch extends MatchResult {
   record: RegRecord;
 }
+
+/** A saved analysis belonging to a signed-in user. */
+export interface Project {
+  id: string;
+  name: string;
+  description: string;
+  matches: EnrichedMatch[];
+  followUps: FollowUp[];
+  createdAt: string;
+}
