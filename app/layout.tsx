@@ -1,10 +1,13 @@
 import type { Metadata } from "next";
+import { Inter } from "next/font/google";
 import "./globals.css";
 
+const inter = Inter({ subsets: ["latin"], display: "swap" });
+
 export const metadata: Metadata = {
-  title: "RegScout — Regulatory & Grant Intelligence",
+  title: "RegScout — Regulatory, Grant & Partner Intelligence",
   description:
-    "Describe your venture and discover the regulations and grant opportunities that matter — starting with California air quality and climate tech.",
+    "Describe your venture and discover the regulations, grant opportunities, and partners that matter — federal and California.",
 };
 
 export default function RootLayout({
@@ -14,7 +17,7 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body className={inter.className}>{children}</body>
     </html>
   );
 }

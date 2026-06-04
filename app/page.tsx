@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import type { EnrichedMatch, RecordType } from "@/lib/types";
+import type { EnrichedMatch, FollowUp, RecordType } from "@/lib/types";
 
 const EXAMPLES = [
   "We build hydrogen fuel-cell powertrains for heavy-duty trucks, manufacturing pilot units in the Bay Area.",
@@ -21,20 +21,20 @@ export default function Home() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<EnrichedMatch[] | null>(null);
-  const [followUps, setFollowUps] = useState<string[]>([]);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
+  const [selections, setSelections] = useState<Record<number, string>>({});
+  const [followUpsOpen, setFollowUpsOpen] = useState(false);
+  const [refinements, setRefinements] = useState<string[]>([]);
+  const boardRef = useRef<HTMLDivElement>(null);
 
-  async function analyze(e: React.FormEvent) {
-    e.preventDefault();
+  async function runMatch(fullText: string) {
     setError(null);
-    setMatches(null);
-    setFollowUps([]);
     setLoading(true);
     try {
       const res = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ description }),
+        body: JSON.stringify({ description: fullText }),
       });
       const data = await res.json();
       if (!res.ok) {
@@ -43,87 +43,151 @@ export default function Home() {
             ? `${data.error} [${data.status ?? "?"}] ${data.detail}`
             : data.error ?? "Request failed.",
         );
-      } else {
-        setMatches(data.matches);
-        setFollowUps(data.followUps ?? []);
+        return false;
       }
+      setMatches(data.matches);
+      setFollowUps(data.followUps ?? []);
+      setSelections({});
+      return true;
     } catch {
       setError("Network error. Please try again.");
+      return false;
     } finally {
       setLoading(false);
     }
   }
 
-  function addFollowUp(q: string) {
-    setDescription((d) => `${d.trim()}\n\n${q} `);
-    const ta = textareaRef.current;
-    if (ta) {
-      ta.focus();
-      ta.scrollIntoView({ behavior: "smooth", block: "center" });
+  async function analyze(e: React.FormEvent) {
+    e.preventDefault();
+    setMatches(null);
+    setRefinements([]);
+    const ok = await runMatch(description);
+    if (ok) setFollowUpsOpen(true);
+  }
+
+  async function refine() {
+    const newLines = followUps
+      .map((f, i) => (selections[i] ? `- ${f.question} → ${selections[i]}` : null))
+      .filter((x): x is string => x !== null);
+    if (newLines.length === 0) return;
+
+    const allRefinements = [...refinements, ...newLines];
+    setRefinements(allRefinements);
+    const fullText = `${description.trim()}\n\nAdditional context:\n${allRefinements.join("\n")}`;
+    const ok = await runMatch(fullText);
+    if (ok) {
+      setFollowUpsOpen(false); // refine once; require explicit opt-in to go again
+      boardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
     }
   }
 
-  return (
-    <main className="container">
-      <div className="hero">
-        <div className="tag">RegScout</div>
-        <h1>Map your regulatory, grant &amp; partner landscape</h1>
-        <p>
-          Describe what your venture does. We&apos;ll surface the federal and
-          California regulations you may face, the grants you could pursue, and
-          the partners worth knowing — sorted into three columns.
-        </p>
-      </div>
+  const hasSelection = Object.keys(selections).length > 0;
 
-      <form onSubmit={analyze}>
-        <textarea
-          ref={textareaRef}
-          value={description}
-          onChange={(e) => setDescription(e.target.value)}
-          placeholder="e.g. We build zero-emission refrigerated trailers for regional grocery fleets, assembled in California…"
-        />
-        <div className="row">
-          <div className="examples">
-            {EXAMPLES.map((ex, i) => (
-              <button
-                key={i}
-                type="button"
-                className="chip"
-                onClick={() => setDescription(ex)}
-              >
-                Example {i + 1}
-              </button>
-            ))}
+  return (
+    <main className="page">
+      <header className="header">
+        <div className="brand">
+          <div className="logo-mark" />
+          <div>
+            <h1>RegScout</h1>
+            <p className="tagline">Regulatory · Grants · Partners</p>
           </div>
-          <button className="primary" type="submit" disabled={loading}>
-            {loading && <span className="spinner" />}
-            {loading ? "Analyzing…" : "Analyze"}
-          </button>
         </div>
-      </form>
+        <span className="scope-pill">Federal + California</span>
+      </header>
+
+      <section className="glass-card intro-card">
+        <p className="intro-text">
+          Describe what your venture does. We&apos;ll surface the regulations you
+          may face, the grants you could pursue, and the partners worth knowing.
+        </p>
+        <form onSubmit={analyze}>
+          <textarea
+            value={description}
+            onChange={(e) => setDescription(e.target.value)}
+            placeholder="e.g. We build zero-emission refrigerated trailers for regional grocery fleets, assembled in California…"
+          />
+          <div className="row">
+            <div className="examples">
+              {EXAMPLES.map((ex, i) => (
+                <button
+                  key={i}
+                  type="button"
+                  className="chip"
+                  onClick={() => setDescription(ex)}
+                >
+                  Example {i + 1}
+                </button>
+              ))}
+            </div>
+            <button
+              className="pill-btn"
+              type="submit"
+              disabled={loading || description.trim().length < 20}
+            >
+              {loading && <span className="spinner" />}
+              {loading ? "Analyzing…" : "Analyze"}
+            </button>
+          </div>
+        </form>
+      </section>
 
       {error && <div className="error">{error}</div>}
 
-      {followUps.length > 0 && (
-        <section className="followups">
+      {matches && !followUpsOpen && followUps.length > 0 && (
+        <div className="refine-further">
+          <button type="button" className="pill-btn ghost" onClick={() => setFollowUpsOpen(true)}>
+            Refine further ↺
+          </button>
+        </div>
+      )}
+
+      {followUpsOpen && followUps.length > 0 && (
+        <section className="glass-card followups">
           <h2>Refine your results</h2>
-          <p>Answer one of these and re-run to sharpen the matches:</p>
-          <div className="followup-list">
-            {followUps.map((q, i) => (
-              <button key={i} type="button" onClick={() => addFollowUp(q)}>
-                {q}
-              </button>
-            ))}
-          </div>
+          <p className="followups-sub">
+            Pick the answers that fit, then refine. (You can refine again afterward.)
+          </p>
+          {followUps.map((f, qi) => (
+            <div className="followup" key={qi}>
+              <span className="followup-q">{f.question}</span>
+              <div className="option-row">
+                {f.options.map((opt, oi) => (
+                  <button
+                    key={oi}
+                    type="button"
+                    className={`option ${selections[qi] === opt ? "selected" : ""}`}
+                    onClick={() =>
+                      setSelections((s) =>
+                        s[qi] === opt
+                          ? Object.fromEntries(Object.entries(s).filter(([k]) => k !== String(qi)))
+                          : { ...s, [qi]: opt },
+                      )
+                    }
+                  >
+                    {opt}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ))}
+          <button
+            type="button"
+            className="pill-btn"
+            onClick={refine}
+            disabled={loading || !hasSelection}
+          >
+            {loading ? "Refining…" : "Refine my results"}
+          </button>
         </section>
       )}
 
       {matches && (
-        <section className="board">
+        <section className="board" ref={boardRef}>
           {COLUMNS.map((col) => {
             const items = matches.filter((m) => m.record.type === col.type);
             return (
-              <div className="column" key={col.type}>
+              <div className={`column col-${col.type}`} key={col.type}>
                 <div className="column-head">
                   <h2>
                     {col.label} <span className="count">{items.length}</span>
@@ -142,9 +206,10 @@ export default function Home() {
       )}
 
       <p className="disclaimer">
-        Prototype on a hand-curated federal + California dataset. Summaries are for
-        orientation only — confirm specifics against the linked official source
-        before making a compliance or funding decision.
+        Prototype on a hand-curated federal + California dataset. Summaries and
+        timing notes are for orientation only — confirm specifics (especially
+        dates, deadlines, and workshop/hearing schedules) against the linked
+        official source before making a compliance or funding decision.
       </p>
     </main>
   );
@@ -169,6 +234,19 @@ function ResultCard({ match }: { match: EnrichedMatch }) {
       </div>
 
       <p className="why">{match.whyRelevant}</p>
+
+      {match.keyDates.length > 0 && (
+        <div className="key-dates">
+          <h4>
+            <CalendarIcon /> Key dates &amp; engagement
+          </h4>
+          <ul>
+            {match.keyDates.map((d, i) => (
+              <li key={i}>{d}</li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       {match.checklist.length > 0 && (
         <div className="checklist">
@@ -200,5 +278,14 @@ function ResultCard({ match }: { match: EnrichedMatch }) {
         Official source ↗
       </a>
     </article>
+  );
+}
+
+function CalendarIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="18" rx="2" />
+      <path d="M16 2v4M8 2v4M3 10h18" />
+    </svg>
   );
 }

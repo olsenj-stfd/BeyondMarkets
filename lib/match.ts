@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { records } from "@/data/records";
-import type { EnrichedMatch, MatchResult } from "@/lib/types";
+import type { EnrichedMatch, FollowUp, MatchResult } from "@/lib/types";
 
 const MODEL = "claude-opus-4-7";
 const MAX_MATCHES = 12;
@@ -42,8 +42,10 @@ Rules:
 - Rank by genuine relevance to THIS company. Return fewer items rather than padding with weak matches.
 - For each match, "whyRelevant" must be concrete and tailored — name the specific exposure, opportunity, or fit, not a generic restatement of the summary.
 - For each match, "checklist" is 3-5 short, high-level, company-specific action items (imperative voice, e.g. "Confirm your facility's potential-to-emit before signing a lease"). This is the at-a-glance summary of what to do next.
+- For each match, "keyDates" is 0-4 short notes on TIMING to get involved in the regulatory or funding process: recurring deadlines (e.g. an annual report due date), public comment periods, and whether the agency holds public workshops or hearings — plus where to find the current schedule. CRITICAL: do NOT invent specific one-off calendar dates you are not certain of. Describe the cadence (annual, rolling, per-rulemaking) and point to the official source to confirm; prefix anything you are not certain about with "Verify:". Regulations and grant solicitation windows usually have keyDates; partners often have none (return an empty array then).
 - "relevance" is 0-100: your confidence that this record materially matters to the company.
-- Also produce "followUps": 2-3 short questions whose answers would let you sharpen or expand the next pass (e.g. clarifying where they operate, their stage, revenue, or whether they handle certain materials). These supplement the results — never a reason to withhold matches.
+
+Also produce "followUps": 2-3 MULTIPLE-CHOICE questions whose answers would let you sharpen or expand the next pass. Each followUp has a short "question" and 2-4 short, concrete, mutually-distinct "options" the user can pick from (e.g. where they operate, their stage, revenue band, or whether they handle hazardous materials). These supplement the results — never a reason to withhold matches.
 
 Here is the catalog (JSON):
 `;
@@ -51,7 +53,7 @@ Here is the catalog (JSON):
 const matchTool: Anthropic.Tool = {
   name: "return_matches",
   description:
-    "Return the ranked catalog records most relevant to the company, plus follow-up questions to refine the next pass.",
+    "Return the ranked catalog records most relevant to the company, plus multiple-choice follow-up questions to refine the next pass.",
   input_schema: {
     type: "object",
     properties: {
@@ -80,15 +82,32 @@ const matchTool: Anthropic.Tool = {
                 "3-5 short, high-level, company-specific action items (imperative voice).",
               items: { type: "string" },
             },
+            keyDates: {
+              type: "array",
+              description:
+                "0-4 short timing notes (recurring deadlines, comment periods, workshops/hearings cadence + where to confirm). No fabricated specific dates; prefix uncertain notes with 'Verify:'.",
+              items: { type: "string" },
+            },
           },
-          required: ["id", "relevance", "whyRelevant", "checklist"],
+          required: ["id", "relevance", "whyRelevant", "checklist", "keyDates"],
         },
       },
       followUps: {
         type: "array",
         description:
-          "2-3 short questions that would sharpen or expand the next pass.",
-        items: { type: "string" },
+          "2-3 multiple-choice questions that would sharpen or expand the next pass.",
+        items: {
+          type: "object",
+          properties: {
+            question: { type: "string", description: "A short refining question." },
+            options: {
+              type: "array",
+              description: "2-4 short, concrete, mutually-distinct answer choices.",
+              items: { type: "string" },
+            },
+          },
+          required: ["question", "options"],
+        },
       },
     },
     required: ["matches", "followUps"],
@@ -97,12 +116,12 @@ const matchTool: Anthropic.Tool = {
 
 export async function matchCompany(
   description: string,
-): Promise<{ matches: EnrichedMatch[]; followUps: string[] }> {
+): Promise<{ matches: EnrichedMatch[]; followUps: FollowUp[] }> {
   const client = new Anthropic();
 
   const message = await client.messages.create({
     model: MODEL,
-    max_tokens: 4096,
+    max_tokens: 8192,
     system: [
       {
         type: "text",
@@ -115,7 +134,7 @@ export async function matchCompany(
     messages: [
       {
         role: "user",
-        content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across regulations, grants, and partners, plus 2-3 follow-up questions.`,
+        content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across regulations, grants, and partners, plus 2-3 multiple-choice follow-up questions.`,
       },
     ],
   });
@@ -129,8 +148,8 @@ export async function matchCompany(
   }
 
   const input = toolUse.input as {
-    matches?: MatchResult[];
-    followUps?: string[];
+    matches?: (MatchResult & { keyDates?: string[] })[];
+    followUps?: FollowUp[];
   };
 
   const byId = new Map(records.map((r) => [r.id, r]));
@@ -143,10 +162,14 @@ export async function matchCompany(
       relevance: Math.max(0, Math.min(100, Math.round(m.relevance))),
       whyRelevant: m.whyRelevant,
       checklist: Array.isArray(m.checklist) ? m.checklist.slice(0, 5) : [],
+      keyDates: Array.isArray(m.keyDates) ? m.keyDates.slice(0, 4) : [],
       record: byId.get(m.id)!,
     }));
 
-  const followUps = (input.followUps ?? []).slice(0, 3);
+  const followUps: FollowUp[] = (input.followUps ?? [])
+    .filter((f) => f && f.question && Array.isArray(f.options) && f.options.length > 0)
+    .slice(0, 3)
+    .map((f) => ({ question: f.question, options: f.options.slice(0, 4) }));
 
   return { matches, followUps };
 }

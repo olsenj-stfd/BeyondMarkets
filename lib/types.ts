@@ -32,12 +32,20 @@ export interface MatchResult {
   whyRelevant: string;
   /** 3-5 high-level, company-specific action items. */
   checklist: string[];
+  /** Recurring/structural timing to engage: deadlines, comment periods, workshops/hearings cadence. */
+  keyDates: string[];
+}
+
+/** A multiple-choice question used to refine the next matching pass. */
+export interface FollowUp {
+  question: string;
+  options: string[];
 }
 
 export interface MatchResponse {
   matches: MatchResult[];
-  /** 2-3 questions that would sharpen the next pass. */
-  followUps: string[];
+  /** 2-3 multiple-choice questions that would sharpen the next pass. */
+  followUps: FollowUp[];
 }
 
 /** A match joined with its full record, for rendering. */
