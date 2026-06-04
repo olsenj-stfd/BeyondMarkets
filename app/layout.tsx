@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ["latin"], display: "swap" });
 export const metadata: Metadata = {
   title: "RegScout — Regulatory, Grant & Partner Intelligence",
   description:
-    "Describe your venture and discover the regulations, grant opportunities, and partners that matter — federal and California.",
+    "Describe your venture and discover the regulations, ongoing funding opportunities, and partners that matter — federal and California.",
 };
 
 export default function RootLayout({

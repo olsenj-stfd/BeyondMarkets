@@ -4,7 +4,7 @@ import type { EnrichedMatch, RecordType } from "@/lib/types";
 
 const COLUMNS: { type: RecordType; label: string; blurb: string }[] = [
   { type: "regulation", label: "Regulations", blurb: "Rules you may need to comply with" },
-  { type: "grant", label: "Grant Opportunities", blurb: "Grants, rebates, loans & tax credits" },
+  { type: "grant", label: "Ongoing Funding Opportunities", blurb: "Grants, rebates, loans & tax credits" },
   { type: "partner", label: "Potential Partners", blurb: "Ecosystem & capital partners" },
 ];
 

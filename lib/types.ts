@@ -102,6 +102,13 @@ export interface OpportunityRow {
   raw: unknown;
 }
 
+/** A dated, append-only note logged against a project over time. */
+export interface ProjectUpdate {
+  id: string;
+  body: string;
+  createdAt: string;
+}
+
 /** A saved analysis belonging to a signed-in user. */
 export interface Project {
   id: string;
@@ -109,5 +116,6 @@ export interface Project {
   description: string;
   matches: EnrichedMatch[];
   followUps: FollowUp[];
+  updates: ProjectUpdate[];
   createdAt: string;
 }
