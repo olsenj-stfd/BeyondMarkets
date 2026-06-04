@@ -839,6 +839,61 @@ details.more[open] summary::before {
   }
 }
 
+/* Star / track button */
+.star-btn {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 22px;
+  line-height: 1;
+  padding: 2px 4px;
+  color: var(--text-secondary);
+  transition: color 0.15s, transform 0.15s;
+}
+
+.star-btn:hover {
+  transform: scale(1.15);
+  color: var(--text-primary);
+}
+
+.star-btn.starred {
+  color: var(--accent-orange);
+}
+
+/* Tracking rollup */
+.tracking-section {
+  margin-bottom: 28px;
+}
+
+.tracking-title {
+  font-size: 18px;
+  font-weight: 600;
+  margin: 0 0 14px;
+  color: var(--text-primary);
+}
+
+/* Project page deadlines block */
+.project-deadlines {
+  margin: 8px 0 32px;
+}
+
+.project-deadlines-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin-bottom: 16px;
+}
+
+.project-deadlines-meta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .notice {
   margin-bottom: 18px;
   padding: 14px 18px;

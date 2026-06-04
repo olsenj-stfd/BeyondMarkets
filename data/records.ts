@@ -833,4 +833,232 @@ export const records: RegRecord[] = [
     tags: ["capital", "venture capital", "equity", "climate investor", "fundraising", "ecosystem", "california"],
     link: "https://www.powerhouse.fund/",
   },
+
+  // ── Named accelerators & incubators ──
+  {
+    id: "greentown-labs",
+    type: "partner",
+    title: "Greentown Labs",
+    agency: "Greentown Labs (non-profit)",
+    agencyAcronym: "Greentown",
+    level: "private",
+    jurisdiction: "Somerville, MA + Houston, TX (national network)",
+    domain: "cross-cutting",
+    summary:
+      "North America's largest climatetech startup incubator, offering prototyping labs, office and wet-lab space, shared equipment, and a corporate-partner network.",
+    applicability:
+      "Early- to growth-stage climate hardware ventures that need physical lab/prototyping space and access to corporate pilot partners.",
+    context:
+      "Greentown is a flagship hardware-friendly incubator; membership signals credibility and plugs founders into utilities, corporates, and investors. While its campuses are in MA and TX, its programs and corporate network reach California ventures.",
+    howToEngage:
+      "Apply for membership or a sponsored accelerator program (e.g., partner-run cohorts). Be ready to describe your hardware roadmap and space/equipment needs.",
+    tags: ["incubator", "accelerator", "cleantech", "hardware", "prototyping", "lab space", "ecosystem"],
+    link: "https://greentownlabs.com/",
+  },
+  {
+    id: "third-derivative",
+    type: "partner",
+    title: "Third Derivative (D3)",
+    agency: "RMI + New Energy Nexus",
+    agencyAcronym: "D3",
+    level: "private",
+    jurisdiction: "Global (U.S.-based)",
+    domain: "cross-cutting",
+    summary:
+      "A global climatetech accelerator co-founded by RMI and New Energy Nexus, connecting startups to a syndicate of investors, corporate partners, and subject-matter experts.",
+    applicability:
+      "Seed to Series A climate startups across energy, mobility, buildings, industry, food, and carbon that want investor and corporate access plus deep technical mentorship.",
+    context:
+      "D3 pairs a large investor syndicate with corporate offtake partners and RMI's technical bench — useful for ventures seeking both capital and commercial validation.",
+    howToEngage:
+      "Apply during open cohort cycles. Strong applicants articulate a clear decarbonization thesis and a near-term pilot or commercial milestone.",
+    tags: ["accelerator", "climate", "investor syndicate", "corporate partners", "RMI", "ecosystem", "early stage"],
+    link: "https://third-derivative.org/",
+  },
+  {
+    id: "new-energy-nexus-calseed",
+    type: "partner",
+    title: "New Energy Nexus / CalSEED",
+    agency: "New Energy Nexus (admin) + California Energy Commission",
+    agencyAcronym: "CalSEED",
+    level: "state",
+    jurisdiction: "California",
+    domain: "energy",
+    summary:
+      "CalSEED provides non-dilutive grants (concept and prototype awards) plus incubation to early-stage California clean-energy innovators, administered by New Energy Nexus and funded by the CEC.",
+    applicability:
+      "Very early-stage (often pre-seed) California-based clean-energy hardware and software innovators seeking non-dilutive funding and structured incubation.",
+    context:
+      "CalSEED is one of the few sources of true pre-seed non-dilutive capital for California clean-energy founders, with a supportive cohort and follow-on prototype funding.",
+    howToEngage:
+      "Apply during the annual CalSEED solicitation. Awards start with a concept grant; strong performers can earn follow-on prototype funding. California residency/footprint required.",
+    tags: ["non-dilutive", "grant", "clean energy", "incubator", "california", "pre-seed", "CEC", "early stage"],
+    link: "https://calseed.fund/",
+  },
+
+  // ── Named climate venture funds ──
+  {
+    id: "lowercarbon-capital",
+    type: "partner",
+    title: "Lowercarbon Capital",
+    agency: "Lowercarbon Capital (VC)",
+    agencyAcronym: "Lowercarbon",
+    level: "private",
+    jurisdiction: "United States (global investing)",
+    domain: "cross-cutting",
+    summary:
+      "A prominent climate-focused venture firm backing technologies that reduce, remove, or avoid greenhouse-gas emissions across many sectors.",
+    applicability:
+      "Venture-scale climate startups — from carbon removal and fusion to industrial decarbonization — with credible large-scale emissions-impact theses.",
+    context:
+      "Lowercarbon is a high-signal climate investor whose participation can catalyze a round; it invests across stages with a strong bias toward hard-tech and gigaton-scale impact.",
+    howToEngage:
+      "Best reached through warm intros from portfolio founders or co-investors. Lead with a quantified emissions-impact thesis and technical defensibility.",
+    tags: ["capital", "venture capital", "climate investor", "carbon removal", "hard tech", "fundraising", "equity"],
+    link: "https://lowercarboncapital.com/",
+  },
+  {
+    id: "congruent-ventures",
+    type: "partner",
+    title: "Congruent Ventures",
+    agency: "Congruent Ventures (VC)",
+    agencyAcronym: "Congruent",
+    level: "private",
+    jurisdiction: "San Francisco, CA",
+    domain: "cross-cutting",
+    summary:
+      "An early-stage (seed/Series A) venture firm focused on sustainability and climate across mobility, energy, food/agriculture, and the built environment.",
+    applicability:
+      "California and U.S. early-stage climate startups raising seed or Series A that want a hands-on lead with deep sector networks.",
+    context:
+      "Congruent is a respected early-stage climate specialist based in San Francisco, often leading first institutional rounds and supporting follow-on syndication.",
+    howToEngage:
+      "Target when raising seed/Series A; warm intros via the Bay Area climate ecosystem (accelerators, labs, co-investors) materially improve response rates.",
+    tags: ["capital", "venture capital", "seed", "series a", "climate investor", "california", "equity"],
+    link: "https://www.congruentvc.com/",
+  },
+  {
+    id: "prelude-ventures",
+    type: "partner",
+    title: "Prelude Ventures",
+    agency: "Prelude Ventures (VC)",
+    agencyAcronym: "Prelude",
+    level: "private",
+    jurisdiction: "San Francisco, CA",
+    domain: "cross-cutting",
+    summary:
+      "A climate-focused venture firm investing across stages in companies addressing decarbonization in energy, transportation, food/agriculture, and advanced materials.",
+    applicability:
+      "Climate ventures from early to growth stage seeking a long-horizon climate-dedicated investor with broad sector coverage.",
+    context:
+      "Prelude is one of the longer-standing dedicated climate funds, able to support companies across multiple rounds — useful for capital-intensive scale-ups.",
+    howToEngage:
+      "Approach with a clear decarbonization thesis and stage fit; warm intros through co-investors and the climate-VC ecosystem are most effective.",
+    tags: ["capital", "venture capital", "climate investor", "decarbonization", "growth", "fundraising", "equity"],
+    link: "https://www.preludeventures.com/",
+  },
+  {
+    id: "energy-impact-partners",
+    type: "partner",
+    title: "Energy Impact Partners",
+    agency: "Energy Impact Partners (VC)",
+    agencyAcronym: "EIP",
+    level: "private",
+    jurisdiction: "United States / global",
+    domain: "energy",
+    summary:
+      "A global investment firm backing companies optimizing energy consumption and decarbonizing industry, with a coalition of utility and corporate limited partners.",
+    applicability:
+      "Energy, grid, and industrial-decarbonization startups that benefit from direct access to utility and corporate customers among EIP's LP coalition.",
+    context:
+      "EIP's distinctive value is its strategic LP base of utilities and large energy users, which can become pilot customers and offtakers — strong for ventures needing utility channels.",
+    howToEngage:
+      "Engage when your product targets utilities or large energy consumers; EIP's coalition can open customer doors as well as provide capital.",
+    tags: ["capital", "venture capital", "energy", "utilities", "grid", "decarbonization", "corporate partners"],
+    link: "https://www.energyimpactpartners.com/",
+  },
+
+  // ── California air districts (regulatory partners & pilot funders) ──
+  {
+    id: "baaqmd",
+    type: "partner",
+    title: "Bay Area Air Quality Management District",
+    agency: "Bay Area Air Quality Management District",
+    agencyAcronym: "BAAQMD",
+    level: "regional",
+    jurisdiction: "San Francisco Bay Area, CA (9 counties)",
+    domain: "air",
+    summary:
+      "The regional air regulator for the nine-county Bay Area; issues stationary-source permits and runs grant/incentive programs (e.g., clean vehicles, equipment replacement) to cut emissions.",
+    applicability:
+      "Ventures with Bay Area facilities needing air permits, and clean-air/mobility startups that can tap district grant and incentive programs or pilot partnerships.",
+    context:
+      "Air districts are both regulators and funders. BAAQMD offers incentive funding (e.g., Carl Moyer, clean-vehicle programs) and can be a pilot partner for emissions-reducing technologies in the Bay Area.",
+    howToEngage:
+      "For permitting, contact the engineering/permitting division early. For funding, monitor BAAQMD grant solicitations and incentive programs and align your project to an open program.",
+    tags: ["air district", "air quality", "permitting", "incentives", "grants", "pilots", "bay area", "emissions"],
+    link: "https://www.baaqmd.gov/",
+  },
+  {
+    id: "scaqmd",
+    type: "partner",
+    title: "South Coast Air Quality Management District",
+    agency: "South Coast Air Quality Management District",
+    agencyAcronym: "SCAQMD",
+    level: "regional",
+    jurisdiction: "Greater Los Angeles region, CA",
+    domain: "air",
+    summary:
+      "The air regulator for the Los Angeles basin (Orange County and parts of LA, Riverside, San Bernardino); permits stationary sources and funds clean-technology demonstrations.",
+    applicability:
+      "Ventures operating in the LA basin needing air permits, and clean-air/transportation startups seeking demonstration funding or pilot sites in Southern California.",
+    context:
+      "SCAQMD regulates one of the most air-impacted regions in the U.S. and runs technology-advancement and incentive programs, making it both a compliance authority and a potential demonstration partner.",
+    howToEngage:
+      "Engage the permitting division for compliance; for funding, track SCAQMD's Technology Advancement Office solicitations and clean-vehicle/equipment incentives.",
+    tags: ["air district", "air quality", "permitting", "incentives", "demonstration", "pilots", "los angeles", "transportation"],
+    link: "https://www.aqmd.gov/",
+  },
+  {
+    id: "sjvapcd",
+    type: "partner",
+    title: "San Joaquin Valley Air Pollution Control District",
+    agency: "San Joaquin Valley Air Pollution Control District",
+    agencyAcronym: "SJVAPCD",
+    level: "regional",
+    jurisdiction: "San Joaquin Valley, CA (8 counties)",
+    domain: "air",
+    summary:
+      "The air regulator for the San Joaquin Valley; permits sources and administers extensive incentive grants for clean trucks, equipment, and agricultural emission reductions.",
+    applicability:
+      "Agriculture, freight, and equipment ventures in the Central Valley needing permits or able to deploy through the district's large incentive-grant programs.",
+    context:
+      "The Valley is a severe-nonattainment air basin, so SJVAPCD runs some of California's largest incentive programs (clean trucks, ag equipment, electrification) — a meaningful deployment channel for emissions-reducing tech.",
+    howToEngage:
+      "For permitting, contact district staff early. For deployment, align your technology to an open incentive program (e.g., clean-truck or ag-equipment grants) and partner with eligible operators.",
+    tags: ["air district", "air quality", "agriculture", "freight", "incentives", "grants", "central valley", "emissions"],
+    link: "https://www.valleyair.org/",
+  },
+
+  // ── Municipal / public deployment partners ──
+  {
+    id: "port-of-la-lb",
+    type: "partner",
+    title: "Port of Los Angeles & Port of Long Beach",
+    agency: "City of Los Angeles / City of Long Beach (San Pedro Bay ports)",
+    agencyAcronym: "POLA/POLB",
+    level: "local",
+    jurisdiction: "Los Angeles & Long Beach, CA",
+    domain: "transportation",
+    summary:
+      "The two largest U.S. container ports, jointly pursuing zero-emission cargo handling and drayage under their Clean Air Action Plan — a major real-world testbed for clean freight and port-electrification tech.",
+    applicability:
+      "Zero-emission trucking, cargo-handling equipment, charging/hydrogen infrastructure, and air-monitoring ventures that can pilot at port scale.",
+    context:
+      "The San Pedro Bay ports' Clean Air Action Plan creates demand and demonstration opportunities for zero-emission freight technologies, often paired with state and air-district incentive funding.",
+    howToEngage:
+      "Engage the ports' environmental/technology-advancement programs and their tenant terminal operators; pair pilots with SCAQMD/CARB incentive funding where possible.",
+    tags: ["municipal", "port", "transportation", "freight", "zero emission", "pilots", "infrastructure", "los angeles"],
+    link: "https://kentico.portoflosangeles.org/environment/air-quality",
+  },
 ];

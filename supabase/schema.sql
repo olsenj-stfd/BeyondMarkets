@@ -7,9 +7,19 @@ create table if not exists public.projects (
   description text not null,
   matches jsonb not null default '[]'::jsonb,
   follow_ups jsonb not null default '[]'::jsonb,
+  -- Cached opportunity ranking: [{ id, relevance, whyRelevant }]. Joined back
+  -- to live `opportunities` on read so stale/expired items drop out.
+  ranked_opportunities jsonb not null default '[]'::jsonb,
+  ranked_at timestamptz,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+-- Backfill the ranking-cache columns for projects created before this migration.
+alter table public.projects
+  add column if not exists ranked_opportunities jsonb not null default '[]'::jsonb;
+alter table public.projects
+  add column if not exists ranked_at timestamptz;
 
 create index if not exists projects_user_id_created_at_idx
   on public.projects (user_id, created_at desc);
@@ -78,3 +88,31 @@ alter table public.opportunities enable row level security;
 drop policy if exists "opportunities: public read" on public.opportunities;
 create policy "opportunities: public read" on public.opportunities
   for select using (true);
+
+-- ---------------------------------------------------------------------------
+-- Favorites: opportunities a user stars to track. Roll up to the dashboard.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.opportunity_favorites (
+  user_id uuid not null references auth.users (id) on delete cascade,
+  opportunity_id uuid not null references public.opportunities (id) on delete cascade,
+  created_at timestamptz not null default now(),
+  primary key (user_id, opportunity_id)
+);
+
+create index if not exists opportunity_favorites_user_idx
+  on public.opportunity_favorites (user_id);
+
+alter table public.opportunity_favorites enable row level security;
+
+drop policy if exists "favorites: select own" on public.opportunity_favorites;
+create policy "favorites: select own" on public.opportunity_favorites
+  for select using (auth.uid() = user_id);
+
+drop policy if exists "favorites: insert own" on public.opportunity_favorites;
+create policy "favorites: insert own" on public.opportunity_favorites
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "favorites: delete own" on public.opportunity_favorites;
+create policy "favorites: delete own" on public.opportunity_favorites
+  for delete using (auth.uid() = user_id);

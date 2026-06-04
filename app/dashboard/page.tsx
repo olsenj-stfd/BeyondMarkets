@@ -1,7 +1,11 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { isSupabaseConfigured } from "@/lib/supabase/env";
-import { getUpcomingOpportunities } from "@/lib/opportunities";
+import {
+  getFavoriteIds,
+  getFavoriteOpportunities,
+  getUpcomingOpportunities,
+} from "@/lib/opportunities";
 import Header from "@/app/components/Header";
 import DeadlinesDashboard from "@/app/components/DeadlinesDashboard";
 
@@ -20,10 +24,16 @@ export default async function DashboardPage() {
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const [{ data: projectRows }, opportunities] = await Promise.all([
-    supabase.from("projects").select("id, name").order("created_at", { ascending: false }),
-    getUpcomingOpportunities(),
-  ]);
+  const [{ data: projectRows }, opportunities, tracked, favoriteIds] =
+    await Promise.all([
+      supabase
+        .from("projects")
+        .select("id, name")
+        .order("created_at", { ascending: false }),
+      getUpcomingOpportunities(),
+      getFavoriteOpportunities(),
+      getFavoriteIds(),
+    ]);
 
   const projects = ((projectRows as ProjectRow[]) ?? []).map((p) => ({
     id: p.id,
@@ -42,7 +52,12 @@ export default async function DashboardPage() {
         </p>
       </section>
 
-      <DeadlinesDashboard opportunities={opportunities} projects={projects} />
+      <DeadlinesDashboard
+        opportunities={opportunities}
+        tracked={tracked}
+        projects={projects}
+        favoriteIds={favoriteIds}
+      />
 
       <p className="disclaimer">
         Dates are pulled directly from each official source and link back to it.

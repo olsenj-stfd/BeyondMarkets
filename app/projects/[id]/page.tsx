@@ -2,8 +2,14 @@ import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import type { EnrichedMatch } from "@/lib/types";
+import {
+  getFavoriteIds,
+  resolveRankedCache,
+  type RankCacheEntry,
+} from "@/lib/opportunities";
 import Header from "@/app/components/Header";
 import { ResultBoard } from "@/app/components/Results";
+import ProjectDeadlines from "@/app/components/ProjectDeadlines";
 
 export const runtime = "nodejs";
 
@@ -12,6 +18,8 @@ interface Row {
   name: string;
   description: string;
   matches: EnrichedMatch[];
+  ranked_opportunities: RankCacheEntry[];
+  ranked_at: string | null;
   created_at: string;
 }
 
@@ -29,12 +37,19 @@ export default async function ProjectPage({
 
   const { data } = await supabase
     .from("projects")
-    .select("id, name, description, matches, created_at")
+    .select(
+      "id, name, description, matches, ranked_opportunities, ranked_at, created_at",
+    )
     .eq("id", id)
     .single();
 
   if (!data) notFound();
   const project = data as Row;
+
+  const [ranked, favoriteIds] = await Promise.all([
+    resolveRankedCache(project.ranked_opportunities ?? []),
+    getFavoriteIds(),
+  ]);
 
   return (
     <main className="page">
@@ -49,6 +64,13 @@ export default async function ProjectPage({
           Saved {new Date(project.created_at).toLocaleDateString()}
         </span>
       </section>
+      <ProjectDeadlines
+        projectId={project.id}
+        initialRanked={ranked}
+        rankedAt={project.ranked_at}
+        favoriteIds={favoriteIds}
+      />
+
       <ResultBoard matches={project.matches ?? []} />
     </main>
   );

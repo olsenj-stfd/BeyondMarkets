@@ -47,6 +47,20 @@ export async function POST(req: Request) {
   try {
     const opportunities = await getUpcomingOpportunities();
     const ranked = await rankOpportunities(project.description, opportunities);
+
+    // Cache the ranking on the project so revisits render instantly.
+    await supabase
+      .from("projects")
+      .update({
+        ranked_opportunities: ranked.map((r) => ({
+          id: r.id,
+          relevance: r.relevance,
+          whyRelevant: r.whyRelevant,
+        })),
+        ranked_at: new Date().toISOString(),
+      })
+      .eq("id", projectId);
+
     return NextResponse.json({ ranked });
   } catch (err) {
     console.error("opportunity match error:", err);

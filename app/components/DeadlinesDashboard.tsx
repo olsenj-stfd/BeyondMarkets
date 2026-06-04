@@ -2,87 +2,30 @@
 
 import { useMemo, useState } from "react";
 import type { Opportunity, RankedOpportunity } from "@/lib/types";
+import OpportunityCard from "@/app/components/OpportunityCard";
+import { useFavorites } from "@/app/components/useFavorites";
 
 interface ProjectOption {
   id: string;
   name: string;
 }
 
-const TYPE_LABEL: Record<Opportunity["type"], string> = {
-  grant_deadline: "Grant deadline",
-  comment_period: "Comment period",
-};
-
-const SOURCE_LABEL: Record<Opportunity["source"], string> = {
-  federal_register: "Federal Register",
-  grants_gov: "Grants.gov",
-  ca_grants: "CA Grants Portal",
-};
-
-function daysUntil(iso: string): number {
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const d = new Date(`${iso}T00:00:00`);
-  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
-}
-
-function formatDate(iso: string): string {
-  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
-    month: "short",
-    day: "numeric",
-    year: "numeric",
-  });
-}
-
 type Jurisdiction = "all" | "federal" | "california";
-
-function Row({ o }: { o: Opportunity | RankedOpportunity }) {
-  const days = o.deadline ? daysUntil(o.deadline) : null;
-  const urgent = days !== null && days <= 14;
-  const why = "whyRelevant" in o ? o.whyRelevant : null;
-  const relevance = "relevance" in o ? o.relevance : null;
-
-  return (
-    <li className="opp-row glass-card">
-      <div className={`opp-deadline ${urgent ? "urgent" : ""}`}>
-        {o.deadline && (
-          <>
-            <span className="opp-date">{formatDate(o.deadline)}</span>
-            <span className="opp-countdown">
-              {days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`}
-            </span>
-          </>
-        )}
-      </div>
-      <div className="opp-body">
-        <div className="opp-badges">
-          <span className={`opp-badge ${o.jurisdiction}`}>
-            {o.jurisdiction === "federal" ? "Federal" : "California"}
-          </span>
-          <span className="opp-badge type">{TYPE_LABEL[o.type]}</span>
-          {o.domain && <span className="opp-badge domain">{o.domain}</span>}
-          {relevance !== null && (
-            <span className="opp-badge fit">{relevance}% fit</span>
-          )}
-        </div>
-        <a href={o.url} target="_blank" rel="noopener noreferrer" className="opp-title">
-          {o.title}
-        </a>
-        {o.agency && <p className="opp-agency">{o.agency}</p>}
-        {why && <p className="opp-why">{why}</p>}
-        <span className="opp-source">{SOURCE_LABEL[o.source]}</span>
-      </div>
-    </li>
-  );
-}
 
 export default function DeadlinesDashboard({
   opportunities,
+  tracked,
   projects,
+  favoriteIds,
+  signedIn = true,
 }: {
   opportunities: Opportunity[];
+  tracked: Opportunity[];
   projects: ProjectOption[];
+  favoriteIds: string[];
+  signedIn?: boolean;
 }) {
+  const { ids: starred, toggle } = useFavorites(favoriteIds);
   const [jurisdiction, setJurisdiction] = useState<Jurisdiction>("all");
   const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? "");
   const [ranked, setRanked] = useState<RankedOpportunity[] | null>(null);
@@ -93,6 +36,18 @@ export default function DeadlinesDashboard({
     if (jurisdiction === "all") return opportunities;
     return opportunities.filter((o) => o.jurisdiction === jurisdiction);
   }, [opportunities, jurisdiction]);
+
+  // The tracked rollup reflects live stars: start from the server list, then
+  // honor optimistic toggles (drop unstarred; the browse list backfills adds).
+  const trackedNow = useMemo(() => {
+    const seen = new Map<string, Opportunity>();
+    for (const o of [...tracked, ...opportunities]) {
+      if (starred.has(o.id) && !seen.has(o.id)) seen.set(o.id, o);
+    }
+    return [...seen.values()].sort((a, b) =>
+      (a.deadline ?? "") < (b.deadline ?? "") ? -1 : 1,
+    );
+  }, [tracked, opportunities, starred]);
 
   async function personalize() {
     if (!projectId) return;
@@ -121,6 +76,22 @@ export default function DeadlinesDashboard({
 
   return (
     <>
+      {signedIn && trackedNow.length > 0 && (
+        <section className="tracking-section">
+          <h3 className="tracking-title">★ Tracking</h3>
+          <ul className="opp-list">
+            {trackedNow.map((o) => (
+              <OpportunityCard
+                key={o.id}
+                o={o}
+                starred={starred.has(o.id)}
+                onToggleStar={toggle}
+              />
+            ))}
+          </ul>
+        </section>
+      )}
+
       <section className="glass-card opp-controls">
         {projects.length > 0 ? (
           <div className="opp-personalize">
@@ -196,7 +167,13 @@ export default function DeadlinesDashboard({
       ) : (
         <ul className="opp-list">
           {showing.map((o) => (
-            <Row key={o.id} o={o} />
+            <OpportunityCard
+              key={o.id}
+              o={o}
+              starred={starred.has(o.id)}
+              onToggleStar={toggle}
+              canStar={signedIn}
+            />
           ))}
         </ul>
       )}
