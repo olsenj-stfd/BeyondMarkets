@@ -53,6 +53,55 @@ export interface EnrichedMatch extends MatchResult {
   record: RegRecord;
 }
 
+export type OpportunitySource =
+  | "federal_register"
+  | "grants_gov"
+  | "ca_grants";
+
+export type OpportunityType = "comment_period" | "grant_deadline";
+
+/** A dated, real-source item ingested from a public API. */
+export interface Opportunity {
+  id: string;
+  source: OpportunitySource;
+  sourceId: string;
+  type: OpportunityType;
+  title: string;
+  agency: string | null;
+  jurisdiction: "federal" | "california";
+  domain: string | null;
+  tags: string[];
+  summary: string | null;
+  url: string;
+  openDate: string | null;
+  deadline: string | null;
+  status: string | null;
+}
+
+/** An opportunity ranked against a saved project by the hybrid matcher. */
+export interface RankedOpportunity extends Opportunity {
+  relevance: number; // 0-100
+  whyRelevant: string;
+}
+
+/** A row ready to upsert into the opportunities table (snake_case columns). */
+export interface OpportunityRow {
+  source: OpportunitySource;
+  source_id: string;
+  type: OpportunityType;
+  title: string;
+  agency: string | null;
+  jurisdiction: "federal" | "california";
+  domain: string | null;
+  tags: string[];
+  summary: string | null;
+  url: string;
+  open_date: string | null;
+  deadline: string | null;
+  status: string | null;
+  raw: unknown;
+}
+
 /** A saved analysis belonging to a signed-in user. */
 export interface Project {
   id: string;

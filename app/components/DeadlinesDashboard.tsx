@@ -1,0 +1,205 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import type { Opportunity, RankedOpportunity } from "@/lib/types";
+
+interface ProjectOption {
+  id: string;
+  name: string;
+}
+
+const TYPE_LABEL: Record<Opportunity["type"], string> = {
+  grant_deadline: "Grant deadline",
+  comment_period: "Comment period",
+};
+
+const SOURCE_LABEL: Record<Opportunity["source"], string> = {
+  federal_register: "Federal Register",
+  grants_gov: "Grants.gov",
+  ca_grants: "CA Grants Portal",
+};
+
+function daysUntil(iso: string): number {
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
+  const d = new Date(`${iso}T00:00:00`);
+  return Math.round((d.getTime() - today.getTime()) / 86_400_000);
+}
+
+function formatDate(iso: string): string {
+  return new Date(`${iso}T00:00:00`).toLocaleDateString(undefined, {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
+
+type Jurisdiction = "all" | "federal" | "california";
+
+function Row({ o }: { o: Opportunity | RankedOpportunity }) {
+  const days = o.deadline ? daysUntil(o.deadline) : null;
+  const urgent = days !== null && days <= 14;
+  const why = "whyRelevant" in o ? o.whyRelevant : null;
+  const relevance = "relevance" in o ? o.relevance : null;
+
+  return (
+    <li className="opp-row glass-card">
+      <div className={`opp-deadline ${urgent ? "urgent" : ""}`}>
+        {o.deadline && (
+          <>
+            <span className="opp-date">{formatDate(o.deadline)}</span>
+            <span className="opp-countdown">
+              {days === 0 ? "today" : days === 1 ? "tomorrow" : `in ${days} days`}
+            </span>
+          </>
+        )}
+      </div>
+      <div className="opp-body">
+        <div className="opp-badges">
+          <span className={`opp-badge ${o.jurisdiction}`}>
+            {o.jurisdiction === "federal" ? "Federal" : "California"}
+          </span>
+          <span className="opp-badge type">{TYPE_LABEL[o.type]}</span>
+          {o.domain && <span className="opp-badge domain">{o.domain}</span>}
+          {relevance !== null && (
+            <span className="opp-badge fit">{relevance}% fit</span>
+          )}
+        </div>
+        <a href={o.url} target="_blank" rel="noopener noreferrer" className="opp-title">
+          {o.title}
+        </a>
+        {o.agency && <p className="opp-agency">{o.agency}</p>}
+        {why && <p className="opp-why">{why}</p>}
+        <span className="opp-source">{SOURCE_LABEL[o.source]}</span>
+      </div>
+    </li>
+  );
+}
+
+export default function DeadlinesDashboard({
+  opportunities,
+  projects,
+}: {
+  opportunities: Opportunity[];
+  projects: ProjectOption[];
+}) {
+  const [jurisdiction, setJurisdiction] = useState<Jurisdiction>("all");
+  const [projectId, setProjectId] = useState<string>(projects[0]?.id ?? "");
+  const [ranked, setRanked] = useState<RankedOpportunity[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const browseList = useMemo(() => {
+    if (jurisdiction === "all") return opportunities;
+    return opportunities.filter((o) => o.jurisdiction === jurisdiction);
+  }, [opportunities, jurisdiction]);
+
+  async function personalize() {
+    if (!projectId) return;
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/opportunities/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(data.error ?? "Could not personalize. Please try again.");
+        return;
+      }
+      setRanked(data.ranked ?? []);
+    } catch {
+      setError("Network error. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  const showing = ranked ?? browseList;
+
+  return (
+    <>
+      <section className="glass-card opp-controls">
+        {projects.length > 0 ? (
+          <div className="opp-personalize">
+            <label htmlFor="opp-project">Personalize for</label>
+            <select
+              id="opp-project"
+              value={projectId}
+              onChange={(e) => {
+                setProjectId(e.target.value);
+                setRanked(null);
+              }}
+            >
+              {projects.map((p) => (
+                <option key={p.id} value={p.id}>
+                  {p.name}
+                </option>
+              ))}
+            </select>
+            <button
+              type="button"
+              className="pill-btn"
+              onClick={personalize}
+              disabled={loading}
+            >
+              {loading ? "Ranking…" : "Rank for this project"}
+            </button>
+            {ranked && (
+              <button
+                type="button"
+                className="pill-btn ghost"
+                onClick={() => setRanked(null)}
+              >
+                Show all
+              </button>
+            )}
+          </div>
+        ) : (
+          <p className="save-hint">
+            Save a project to get a personalized, ranked list of these deadlines.
+          </p>
+        )}
+
+        {!ranked && (
+          <div className="opp-filters">
+            {(["all", "federal", "california"] as Jurisdiction[]).map((j) => (
+              <button
+                key={j}
+                type="button"
+                className={`chip ${jurisdiction === j ? "selected" : ""}`}
+                onClick={() => setJurisdiction(j)}
+              >
+                {j === "all" ? "All" : j === "federal" ? "Federal" : "California"}
+              </button>
+            ))}
+          </div>
+        )}
+      </section>
+
+      {error && <div className="error">{error}</div>}
+
+      {ranked && (
+        <p className="opp-context">
+          Ranked against your project — nearest deadline first.
+        </p>
+      )}
+
+      {showing.length === 0 ? (
+        <p className="empty">
+          {ranked
+            ? "No upcoming opportunities matched this project."
+            : "No upcoming opportunities yet. They populate after the daily ingestion runs."}
+        </p>
+      ) : (
+        <ul className="opp-list">
+          {showing.map((o) => (
+            <Row key={o.id} o={o} />
+          ))}
+        </ul>
+      )}
+    </>
+  );
+}

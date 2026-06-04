@@ -668,6 +668,177 @@ details.more[open] summary::before {
   color: var(--text-primary);
 }
 
+/* ───────── Deadlines dashboard ───────── */
+.chip.selected {
+  background: var(--accent-yellow);
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+  font-weight: 600;
+}
+
+.opp-controls {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 24px;
+}
+
+.opp-personalize {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.opp-personalize label {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.opp-personalize select {
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-solid);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+  max-width: 320px;
+}
+
+.opp-filters {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.opp-context {
+  margin: 0 0 16px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.opp-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.opp-row {
+  display: flex;
+  gap: 20px;
+  align-items: flex-start;
+  padding: 18px 22px;
+}
+
+.opp-deadline {
+  flex: 0 0 110px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.opp-date {
+  font-weight: 700;
+  font-size: 15px;
+  color: var(--text-primary);
+}
+
+.opp-countdown {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.opp-deadline.urgent .opp-date,
+.opp-deadline.urgent .opp-countdown {
+  color: #b4541f;
+}
+
+.opp-body {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.opp-badges {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.opp-badge {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 10px;
+  border-radius: var(--radius-pill);
+  background: var(--bg-solid);
+  border: 1px solid var(--border-soft);
+  color: var(--text-secondary);
+  text-transform: capitalize;
+}
+
+.opp-badge.federal {
+  background: rgba(28, 28, 28, 0.08);
+  color: var(--text-primary);
+}
+
+.opp-badge.california {
+  background: rgba(231, 246, 94, 0.5);
+  color: var(--text-primary);
+}
+
+.opp-badge.fit {
+  background: var(--accent-yellow);
+  color: var(--text-primary);
+}
+
+.opp-title {
+  font-weight: 600;
+  font-size: 16px;
+  color: var(--text-primary);
+  text-decoration: none;
+  line-height: 1.35;
+}
+
+.opp-title:hover {
+  text-decoration: underline;
+}
+
+.opp-agency {
+  margin: 0;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.opp-why {
+  margin: 4px 0 0;
+  font-size: 14px;
+  color: var(--text-primary);
+  line-height: 1.5;
+}
+
+.opp-source {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+@media (max-width: 640px) {
+  .opp-row {
+    flex-direction: column;
+    gap: 10px;
+  }
+  .opp-deadline {
+    flex-direction: row;
+    gap: 8px;
+    align-items: baseline;
+  }
+}
+
 .notice {
   margin-bottom: 18px;
   padding: 14px 18px;

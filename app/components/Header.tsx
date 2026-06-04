@@ -38,6 +38,9 @@ export default function Header() {
         {ready &&
           (email ? (
             <>
+              <Link href="/dashboard" className="nav-link">
+                Deadlines
+              </Link>
               <Link href="/projects" className="nav-link">
                 My projects
               </Link>
