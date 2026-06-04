@@ -25,6 +25,7 @@ export default function Home() {
   const [refinements, setRefinements] = useState<string[]>([]);
   const boardRef = useRef<HTMLDivElement>(null);
 
+  const [elapsed, setElapsed] = useState(0);
   const [signedIn, setSignedIn] = useState(false);
   const [saveName, setSaveName] = useState("");
   const [saving, setSaving] = useState(false);
@@ -43,36 +44,64 @@ export default function Home() {
   async function runMatch(fullText: string) {
     setError(null);
     setLoading(true);
+    setElapsed(0);
+    const startedAt = Date.now();
+    const ticker = setInterval(
+      () => setElapsed(Math.floor((Date.now() - startedAt) / 1000)),
+      1000,
+    );
     try {
       const res = await fetch("/api/match", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: fullText }),
       });
-      const raw = await res.text();
-      let data: { matches?: EnrichedMatch[]; followUps?: FollowUp[]; error?: string } = {};
-      try {
-        data = raw ? JSON.parse(raw) : {};
-      } catch {
-        setError(
-          res.status === 504
-            ? "The analysis took too long and timed out. Please try again."
-            : `Request failed (${res.status}). Please try again.`,
-        );
-        return false;
-      }
-      if (!res.ok) {
+
+      // Validation/server errors come back as plain JSON, not a stream.
+      if (!res.ok || !res.body) {
+        const data = await res.json().catch(() => ({}));
         setError(data.error ?? `Request failed (${res.status}).`);
         return false;
       }
-      setMatches(data.matches ?? []);
-      setFollowUps(data.followUps ?? []);
+
+      const reader = res.body.getReader();
+      const decoder = new TextDecoder();
+      let buffer = "";
+      let result: { matches?: EnrichedMatch[]; followUps?: FollowUp[] } | null = null;
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+        buffer += decoder.decode(value, { stream: true });
+        let nl: number;
+        while ((nl = buffer.indexOf("\n")) >= 0) {
+          const line = buffer.slice(0, nl).trim();
+          buffer = buffer.slice(nl + 1);
+          if (!line) continue;
+          const msg = JSON.parse(line);
+          if (msg.t === "error") {
+            setError(msg.error ?? "Something went wrong. Please try again.");
+            return false;
+          }
+          if (msg.t === "done") result = msg;
+        }
+      }
+
+      if (!result) {
+        // Stream ended without a result — usually the function hit its time limit.
+        setError("The analysis took too long and timed out. Please try again.");
+        return false;
+      }
+
+      setMatches(result.matches ?? []);
+      setFollowUps(result.followUps ?? []);
       setSelections({});
       return true;
     } catch {
       setError("Network error. Please try again.");
       return false;
     } finally {
+      clearInterval(ticker);
       setLoading(false);
     }
   }
@@ -161,7 +190,7 @@ export default function Home() {
               disabled={loading || description.trim().length < 20}
             >
               {loading && <span className="spinner" />}
-              {loading ? "Analyzing…" : "Analyze"}
+              {loading ? `Analyzing… ${elapsed}s` : "Analyze"}
             </button>
           </div>
         </form>
@@ -212,7 +241,7 @@ export default function Home() {
             onClick={refine}
             disabled={loading || !hasSelection}
           >
-            {loading ? "Refining…" : "Refine my results"}
+            {loading ? `Refining… ${elapsed}s` : "Refine my results"}
           </button>
         </section>
       )}

@@ -26,16 +26,46 @@ export async function POST(req: Request) {
     );
   }
 
-  try {
-    const { matches, followUps } = await matchCompany(description.trim());
-    return NextResponse.json({ matches, followUps });
-  } catch (err) {
-    console.error("match error:", err);
-    return NextResponse.json(
-      {
-        error: "Something went wrong while analyzing your company. Please try again.",
-      },
-      { status: 502 },
-    );
-  }
+  const trimmed = description.trim();
+  const encoder = new TextEncoder();
+
+  // Stream newline-delimited JSON. Periodic heartbeats keep the connection
+  // active so proxies don't idle-cut a long-running analysis, and let the
+  // client show live progress instead of a frozen spinner.
+  const stream = new ReadableStream<Uint8Array>({
+    async start(controller) {
+      const send = (obj: unknown) =>
+        controller.enqueue(encoder.encode(JSON.stringify(obj) + "\n"));
+
+      const heartbeat = setInterval(() => {
+        try {
+          send({ t: "progress" });
+        } catch {
+          // controller already closed
+        }
+      }, 4000);
+
+      try {
+        const { matches, followUps } = await matchCompany(trimmed);
+        send({ t: "done", matches, followUps });
+      } catch (err) {
+        console.error("match error:", err);
+        send({
+          t: "error",
+          error:
+            "Something went wrong while analyzing your company. Please try again.",
+        });
+      } finally {
+        clearInterval(heartbeat);
+        controller.close();
+      }
+    },
+  });
+
+  return new Response(stream, {
+    headers: {
+      "Content-Type": "application/x-ndjson; charset=utf-8",
+      "Cache-Control": "no-store, no-transform",
+    },
+  });
 }
