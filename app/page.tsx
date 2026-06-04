@@ -38,11 +38,7 @@ export default function Home() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(
-          data.detail
-            ? `${data.error} [${data.status ?? "?"}] ${data.detail}`
-            : data.error ?? "Request failed.",
-        );
+        setError(data.error ?? "Request failed.");
         return false;
       }
       setMatches(data.matches);

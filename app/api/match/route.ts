@@ -31,19 +31,9 @@ export async function POST(req: Request) {
     return NextResponse.json({ matches, followUps });
   } catch (err) {
     console.error("match error:", err);
-    const detail =
-      err instanceof Error
-        ? `${err.name}: ${err.message}`
-        : String(err);
-    const status =
-      typeof (err as { status?: unknown })?.status === "number"
-        ? (err as { status: number }).status
-        : undefined;
     return NextResponse.json(
       {
         error: "Something went wrong while analyzing your company. Please try again.",
-        detail,
-        status,
       },
       { status: 502 },
     );
