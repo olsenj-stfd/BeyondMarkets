@@ -3,7 +3,7 @@ import { records } from "@/data/records";
 import type { EnrichedMatch, FollowUp, MatchResult } from "@/lib/types";
 
 const MODEL = "claude-opus-4-7";
-const MAX_MATCHES = 12;
+const MAX_MATCHES = 10;
 
 /**
  * Compact view of the dataset sent to the model for ranking. Heavy fields
@@ -119,9 +119,11 @@ export async function matchCompany(
 ): Promise<{ matches: EnrichedMatch[]; followUps: FollowUp[] }> {
   const client = new Anthropic();
 
+  // effort is GA on the API but not yet in this SDK's types; cast to pass it through.
   const stream = client.messages.stream({
     model: MODEL,
-    max_tokens: 8192,
+    max_tokens: 4096,
+    output_config: { effort: "low" },
     system: [
       {
         type: "text",
@@ -137,7 +139,7 @@ export async function matchCompany(
         content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across regulations, grants, and partners, plus 2-3 multiple-choice follow-up questions.`,
       },
     ],
-  });
+  } as unknown as Anthropic.MessageStreamParams);
 
   const message = await stream.finalMessage();
 
