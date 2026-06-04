@@ -2,7 +2,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { records } from "@/data/records";
 import type { EnrichedMatch, FollowUp, MatchResult } from "@/lib/types";
 
-const MODEL = "claude-opus-4-7";
+const MODEL = "claude-sonnet-4-6";
 const MAX_MATCHES = 10;
 
 /**
