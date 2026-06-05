@@ -9,6 +9,7 @@ const TYPE_LABEL: Record<Opportunity["type"], string> = {
 
 const SOURCE_LABEL: Record<Opportunity["source"], string> = {
   federal_register: "Federal Register",
+  regulations_gov: "Regulations.gov",
   grants_gov: "Grants.gov",
   ca_grants: "CA Grants Portal",
 };

@@ -105,6 +105,97 @@ export async function fetchFederalRegister(): Promise<OpportunityRow[]> {
   return rows;
 }
 
+// ───────────────────────────── Regulations.gov ─────────────────────────────
+// Federal documents currently open for public comment (proposed rules +
+// notices), across all agencies. Broader than the Federal Register slice
+// (which is proposed rules only). We can't combine `searchTerm` with the
+// comment-period filters in the v4 API (that combination returns nothing), so
+// we pull everything within an open comment period and keep only items that
+// classify into one of our domains. Requires a free api.data.gov key.
+// run.ts drops any row that duplicates a Federal Register rule (via frDocNum).
+
+interface RgDocAttributes {
+  title: string;
+  documentType: string;
+  postedDate: string | null;
+  commentEndDate: string | null;
+  agencyId: string | null;
+  frDocNum: string | null;
+}
+interface RgDoc {
+  id: string;
+  attributes: RgDocAttributes;
+}
+
+const REGULATIONS_GOV_DOC_TYPES = ["Proposed Rule", "Notice"];
+// Pages of 250 per document type. The open-comment set is in the low thousands
+// across all topics; a couple of pages per type captures the recent bulk that
+// our domain classifier then narrows to climate/energy/air/etc.
+const REGULATIONS_GOV_MAX_PAGES = 2;
+
+export async function fetchRegulationsGov(): Promise<OpportunityRow[]> {
+  const apiKey = process.env.REGULATIONS_GOV_API_KEY;
+  if (!apiKey) {
+    throw new Error(
+      "REGULATIONS_GOV_API_KEY not set — get a free key at https://api.data.gov/signup/",
+    );
+  }
+
+  const byId = new Map<string, OpportunityRow>();
+
+  for (const docType of REGULATIONS_GOV_DOC_TYPES) {
+    for (let page = 1; page <= REGULATIONS_GOV_MAX_PAGES; page++) {
+      const params = new URLSearchParams();
+      params.set("filter[withinCommentPeriod]", "true");
+      params.set("filter[documentType]", docType);
+      params.set("page[size]", "250");
+      params.set("page[number]", String(page));
+      params.set("sort", "-postedDate");
+      params.set("api_key", apiKey);
+
+      let docs: RgDoc[] = [];
+      try {
+        const data = await getJson(
+          `https://api.regulations.gov/v4/documents?${params}`,
+        );
+        docs = data?.data ?? [];
+      } catch {
+        break; // a page/type failing shouldn't sink the whole source
+      }
+      if (docs.length === 0) break; // no more pages
+
+      for (const d of docs) {
+        if (byId.has(d.id)) continue;
+        const a = d.attributes;
+        const deadline = toIsoDate(a.commentEndDate);
+        if (!deadline) continue; // no actionable close date → skip
+        const { domain, tags } = classify(a.title);
+        if (!domain) continue; // keep on-topic
+        byId.set(d.id, {
+          source: "regulations_gov",
+          source_id: d.id,
+          type: "comment_period",
+          title: a.title,
+          agency: a.agencyId,
+          jurisdiction: "federal",
+          domain,
+          tags,
+          summary: null,
+          url: `https://www.regulations.gov/document/${d.id}`,
+          open_date: toIsoDate(a.postedDate),
+          deadline,
+          status: "comment_open",
+          raw: d,
+        });
+      }
+
+      if (docs.length < 250) break; // last page
+    }
+  }
+
+  return [...byId.values()];
+}
+
 // ───────────────────────────── Grants.gov ─────────────────────────────
 // Posted federal grants matching environmental keywords, with a close date.
 

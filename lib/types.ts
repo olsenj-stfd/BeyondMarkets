@@ -55,6 +55,7 @@ export interface EnrichedMatch extends MatchResult {
 
 export type OpportunitySource =
   | "federal_register"
+  | "regulations_gov"
   | "grants_gov"
   | "ca_grants";
 

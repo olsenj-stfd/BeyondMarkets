@@ -47,8 +47,9 @@ export default async function DashboardPage() {
         <h2 className="section-title">Upcoming deadlines</h2>
         <p className="intro-text">
           Real, dated grant deadlines and regulatory comment periods from
-          Grants.gov, the California Grants Portal, and the Federal Register.
-          Pick a saved project to rank them by relevance to your venture.
+          Grants.gov, the California Grants Portal, the Federal Register, and
+          Regulations.gov. Pick a saved project to rank them by relevance to
+          your venture.
         </p>
       </section>
 
