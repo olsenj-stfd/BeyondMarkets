@@ -1,11 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
-import type {
-  EnrichedMatch,
-  FollowUp,
-  Project,
-  ProjectUpdate,
-} from "@/lib/types";
+import type { EnrichedMatch, FollowUp, Project } from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -15,7 +10,6 @@ interface ProjectRow {
   description: string;
   matches: EnrichedMatch[];
   follow_ups: FollowUp[];
-  updates: ProjectUpdate[];
   created_at: string;
 }
 
@@ -26,7 +20,6 @@ function toProject(row: ProjectRow): Project {
     description: row.description,
     matches: row.matches ?? [],
     followUps: row.follow_ups ?? [],
-    updates: row.updates ?? [],
     createdAt: row.created_at,
   };
 }
@@ -42,7 +35,7 @@ export async function GET() {
 
   const { data, error } = await supabase
     .from("projects")
-    .select("id, name, description, matches, follow_ups, updates, created_at")
+    .select("id, name, description, matches, follow_ups, created_at")
     .order("created_at", { ascending: false });
 
   if (error) {
@@ -92,7 +85,7 @@ export async function POST(req: Request) {
       matches: Array.isArray(body.matches) ? body.matches : [],
       follow_ups: Array.isArray(body.followUps) ? body.followUps : [],
     })
-    .select("id, name, description, matches, follow_ups, updates, created_at")
+    .select("id, name, description, matches, follow_ups, created_at")
     .single();
 
   if (error || !data) {

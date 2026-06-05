@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EnrichedMatch, ProjectUpdate } from "@/lib/types";
+import type { EnrichedMatch } from "@/lib/types";
 import {
   getFavoriteIds,
   resolveRankedCache,
@@ -10,7 +10,6 @@ import {
 import Header from "@/app/components/Header";
 import { ResultBoard } from "@/app/components/Results";
 import ProjectDeadlines from "@/app/components/ProjectDeadlines";
-import ProjectUpdates from "@/app/components/ProjectUpdates";
 
 export const runtime = "nodejs";
 
@@ -21,7 +20,6 @@ interface Row {
   matches: EnrichedMatch[];
   ranked_opportunities: RankCacheEntry[];
   ranked_at: string | null;
-  updates: ProjectUpdate[];
   created_at: string;
 }
 
@@ -40,7 +38,7 @@ export default async function ProjectPage({
   const { data } = await supabase
     .from("projects")
     .select(
-      "id, name, description, matches, ranked_opportunities, ranked_at, updates, created_at",
+      "id, name, description, matches, ranked_opportunities, ranked_at, created_at",
     )
     .eq("id", id)
     .single();
@@ -65,13 +63,6 @@ export default async function ProjectPage({
         <span className="project-date">
           Saved {new Date(project.created_at).toLocaleDateString()}
         </span>
-      </section>
-
-      <section className="glass-card">
-        <ProjectUpdates
-          projectId={project.id}
-          initialUpdates={project.updates ?? []}
-        />
       </section>
 
       <ProjectDeadlines

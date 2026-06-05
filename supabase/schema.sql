@@ -11,9 +11,6 @@ create table if not exists public.projects (
   -- to live `opportunities` on read so stale/expired items drop out.
   ranked_opportunities jsonb not null default '[]'::jsonb,
   ranked_at timestamptz,
-  -- Dated, append-only progress notes: [{ id, body, created_at }]. Lets the
-  -- owner log updates over time without rewriting the original description.
-  updates jsonb not null default '[]'::jsonb,
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
@@ -23,8 +20,6 @@ alter table public.projects
   add column if not exists ranked_opportunities jsonb not null default '[]'::jsonb;
 alter table public.projects
   add column if not exists ranked_at timestamptz;
-alter table public.projects
-  add column if not exists updates jsonb not null default '[]'::jsonb;
 
 create index if not exists projects_user_id_created_at_idx
   on public.projects (user_id, created_at desc);

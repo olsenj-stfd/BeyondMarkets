@@ -33,7 +33,24 @@ export async function updateSession(request: NextRequest) {
     },
   );
 
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Require sign-in for all page routes. Public exceptions: the login page and
+  // auth callbacks. API routes self-guard (they return 401), so we let them
+  // through rather than redirecting a fetch to an HTML login page.
+  const { pathname } = request.nextUrl;
+  const isPublic =
+    pathname === "/login" ||
+    pathname.startsWith("/auth") ||
+    pathname.startsWith("/api");
+
+  if (!user && !isPublic) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }
