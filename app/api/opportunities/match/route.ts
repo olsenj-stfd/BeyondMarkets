@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { getUpcomingOpportunities } from "@/lib/opportunities";
 import { rankOpportunities } from "@/lib/match-opportunities";
@@ -64,6 +65,25 @@ export async function POST(req: Request) {
     return NextResponse.json({ ranked });
   } catch (err) {
     console.error("opportunity match error:", err);
+
+    // Surface the real cause so the user (and we) can tell a transient blip
+    // from a billing/key problem, instead of an opaque "try again".
+    if (err instanceof Anthropic.APIError) {
+      const status = err.status ?? 500;
+      const message =
+        status === 429
+          ? "Rate limited by the AI service. Wait a moment and try again."
+          : status === 401 || status === 403
+            ? "The AI service rejected the API key. Check ANTHROPIC_API_KEY."
+            : status === 400 &&
+                /credit|balance|billing|quota/i.test(err.message)
+              ? "The Anthropic account is out of credit. Add billing to continue."
+              : status === 529 || status === 503
+                ? "The AI service is temporarily overloaded. Please try again."
+                : `AI service error (${status}). Please try again.`;
+      return NextResponse.json({ error: message }, { status: 502 });
+    }
+
     return NextResponse.json(
       { error: "Could not rank opportunities. Please try again." },
       { status: 500 },
