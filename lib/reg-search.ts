@@ -55,6 +55,38 @@ function clean(s: string | null | undefined): string {
 
 const todayIso = () => new Date().toISOString().slice(0, 10);
 
+// Every US state except California. Used to recognize and drop other states'
+// State Implementation Plan (SIP) / air-plan actions — the Federal Register is
+// full of these and they're noise for a California-focused company.
+const OTHER_STATES = [
+  "Alabama", "Alaska", "Arizona", "Arkansas", "Colorado", "Connecticut",
+  "Delaware", "Florida", "Georgia", "Hawaii", "Idaho", "Illinois", "Indiana",
+  "Iowa", "Kansas", "Kentucky", "Louisiana", "Maine", "Maryland",
+  "Massachusetts", "Michigan", "Minnesota", "Mississippi", "Missouri",
+  "Montana", "Nebraska", "Nevada", "New Hampshire", "New Jersey", "New Mexico",
+  "New York", "North Carolina", "North Dakota", "Ohio", "Oklahoma", "Oregon",
+  "Pennsylvania", "Rhode Island", "South Carolina", "South Dakota", "Tennessee",
+  "Texas", "Utah", "Vermont", "Virginia", "Washington", "West Virginia",
+  "Wisconsin", "Wyoming",
+];
+
+/**
+ * True for Federal Register items that are another state's SIP / air-plan
+ * action (e.g. "Air Plan Approval; New York; ..."). These are state-plan
+ * paperwork, not something a California venture acts on, so we drop them.
+ * California's own air-plan actions are kept.
+ */
+function isOtherStateSip(title: string): boolean {
+  const t = title.toLowerCase();
+  const sipLike =
+    /implementation plan|air plan|\bstate plan\b|\bsip\b|infrastructure sip/.test(
+      t,
+    );
+  if (!sipLike) return false;
+  if (/california/.test(t)) return false;
+  return OTHER_STATES.some((s) => t.includes(s.toLowerCase()));
+}
+
 /**
  * Ask a fast model for specific, searchable regulatory phrases describing what
  * the company physically does (processes, materials, emissions, waste streams).
@@ -248,6 +280,11 @@ export async function searchRegulations(
       if (s.status !== "fulfilled") continue;
       for (const r of s.value) {
         if (seen.has(r.id)) continue;
+        // Drop other states' SIP / air-plan paperwork — pure noise for a
+        // California-focused venture.
+        if (r.source === "federal_register" && isOtherStateSip(r.title)) {
+          continue;
+        }
         seen.add(r.id);
         (r.kind === "proposed" ? proposed : inForce).push(r);
       }

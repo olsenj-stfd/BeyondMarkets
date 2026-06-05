@@ -190,6 +190,26 @@ export const records: RegRecord[] = [
     link: "https://ww2.arb.ca.gov/our-work/programs/airborne-toxic-control-measures",
   },
   {
+    id: "carb-ab617",
+    type: "regulation",
+    title: "AB 617 Community Air Protection Program",
+    agency: "California Air Resources Board",
+    agencyAcronym: "CARB",
+    level: "state",
+    jurisdiction: "California",
+    domain: "air",
+    summary:
+      "Statewide program targeting air pollution in the most impacted communities through neighborhood-scale monitoring, Community Emissions Reduction Plans (CERPs), and tighter requirements on local sources.",
+    applicability:
+      "Facilities sited in or near designated AB 617 communities, especially those emitting criteria pollutants or air toxics. Hardware, industrial, and logistics ventures choosing a location should expect heightened scrutiny and monitoring expectations there.",
+    context:
+      "AB 617 shifts air regulation toward cumulative, neighborhood-scale impacts. Selected communities get monitoring networks and CERPs that can impose source-specific measures beyond statewide rules — and also unlock targeted incentive funding.",
+    howToEngage:
+      "Check whether your planned facility falls in a designated AB 617 community on CARB's program map, engage the local air district's community steering committee early, and align siting and controls with the local CERP.",
+    tags: ["air quality", "environmental justice", "disadvantaged communities", "monitoring", "criteria pollutants", "air toxics", "siting"],
+    link: "https://ww2.arb.ca.gov/our-work/programs/community-air-protection-program-ab617",
+  },
+  {
     id: "baaqmd-permit",
     type: "regulation",
     title: "BAAQMD Permit to Operate / Authority to Construct",
@@ -411,6 +431,46 @@ export const records: RegRecord[] = [
   },
 
   // ───────────────────────── GRANTS / INCENTIVES ─────────────────────────
+  {
+    id: "ca-climate-investments",
+    type: "grant",
+    title: "California Climate Investments (CCI)",
+    agency: "California Air Resources Board (statewide portfolio)",
+    agencyAcronym: "CCI",
+    level: "state",
+    jurisdiction: "California",
+    domain: "climate",
+    summary:
+      "An umbrella of dozens of grant, voucher, and rebate programs funded by cap-and-trade auction proceeds — spanning clean transportation, energy, building decarbonization, waste, natural lands, and community resilience.",
+    applicability:
+      "Ventures whose projects cut greenhouse gas emissions in California, especially those delivering benefits to priority/disadvantaged communities, which receive a large statutory share of the funds.",
+    context:
+      "CCI is the spending side of the Greenhouse Gas Reduction Fund. Rather than one application, it is a portfolio of programs (HVIP, Clean Mobility Options, equitable building decarbonization, urban greening, and more), each with its own administrator and funding windows.",
+    howToEngage:
+      "Identify the specific CCI program that fits your project in the CCI program catalog, track that program's funding rounds, and emphasize quantified GHG reductions and community benefits in applications.",
+    tags: ["grant", "cap and trade", "climate", "disadvantaged communities", "clean transportation", "funding", "incentive"],
+    link: "https://www.caclimateinvestments.ca.gov/",
+  },
+  {
+    id: "ca-ggrf",
+    type: "grant",
+    title: "Greenhouse Gas Reduction Fund (GGRF)",
+    agency: "State of California (cap-and-trade proceeds)",
+    agencyAcronym: "GGRF",
+    level: "state",
+    jurisdiction: "California",
+    domain: "climate",
+    summary:
+      "The state fund that receives California cap-and-trade auction proceeds and appropriates them — through the annual budget — to the California Climate Investments programs.",
+    applicability:
+      "Indirectly relevant to any California climate venture: GGRF appropriations determine how much funding flows to each CCI program each year, so the state budget cycle drives program availability.",
+    context:
+      "GGRF is the funding source behind CCI. Watching the Governor's budget and legislative appropriations signals which programs will be well-funded in the coming cycle — useful for timing applications.",
+    howToEngage:
+      "Track the annual state budget and GGRF appropriations to anticipate which CCI programs will open, then apply through the relevant program administrator.",
+    tags: ["funding", "cap and trade", "state budget", "climate", "appropriations", "grant"],
+    link: "https://ww2.arb.ca.gov/our-work/programs/california-climate-investments",
+  },
   {
     id: "calstart-hvip",
     type: "grant",

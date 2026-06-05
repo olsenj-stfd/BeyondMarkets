@@ -57,11 +57,20 @@ export default function ProjectAnalysis({
     [projectId],
   );
 
-  // Compute on first open if we don't have a cached analysis yet.
+  // Compute on first open if we don't have a usable cached analysis yet. We
+  // also recompute stale caches that predate live regulations (no regulation
+  // matches AND no live regulation results) so older projects pick up the
+  // Regulations column without a manual refine.
   useEffect(() => {
     if (ranOnce.current) return;
     ranOnce.current = true;
-    if (initialMatches.length === 0) void analyze();
+    const hasReg = initialMatches.some((m) => m.record.type === "regulation");
+    if (
+      initialMatches.length === 0 ||
+      (!hasReg && initialRegulations.length === 0)
+    ) {
+      void analyze();
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

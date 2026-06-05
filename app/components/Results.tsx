@@ -16,19 +16,28 @@ export function ResultBoard({
   regulations: LiveRegResult[];
   boardRef?: React.Ref<HTMLDivElement>;
 }) {
+  const curatedRegs = matches.filter((m) => m.record.type === "regulation");
+  const regCount = curatedRegs.length + regulations.length;
   return (
     <section className="board" ref={boardRef}>
       <div className="column col-regulation">
         <div className="column-head">
           <h2>
-            Regulations <span className="count">{regulations.length}</span>
+            Regulations <span className="count">{regCount}</span>
           </h2>
-          <p>Specific federal rules, found live in eCFR &amp; the Federal Register</p>
+          <p>Named programs plus live eCFR &amp; Federal Register matches</p>
         </div>
-        {regulations.length === 0 ? (
-          <p className="empty">No specific federal regulations matched yet.</p>
+        {regCount === 0 ? (
+          <p className="empty">No regulations matched this venture yet.</p>
         ) : (
-          regulations.map((r) => <RegCard key={r.id} reg={r} />)
+          <>
+            {curatedRegs.map((m) => (
+              <ResultCard key={m.id} match={m} />
+            ))}
+            {regulations.map((r) => (
+              <RegCard key={r.id} reg={r} />
+            ))}
+          </>
         )}
       </div>
 

@@ -3,7 +3,7 @@ import { records } from "@/data/records";
 import type { EnrichedMatch, FollowUp, MatchResult } from "@/lib/types";
 
 const MODEL = "claude-sonnet-4-6";
-const MAX_MATCHES = 5;
+const MAX_MATCHES = 7;
 const MAX_CHECKLIST = 4;
 const MAX_KEY_DATES = 3;
 // Cap output so a single analysis can't run past the serverless duration limit.
@@ -16,11 +16,7 @@ const MAX_OUTPUT_TOKENS = 3072;
  */
 function datasetForPrompt(): string {
   return JSON.stringify(
-    // Regulations are now sourced live (eCFR + Federal Register) in the
-    // Regulations column, so the curated matcher only ranks grants + partners.
-    records
-      .filter((r) => r.type !== "regulation")
-      .map((r) => ({
+    records.map((r) => ({
       id: r.id,
       type: r.type,
       title: r.title,
@@ -35,19 +31,21 @@ function datasetForPrompt(): string {
   );
 }
 
-const SYSTEM_INTRO = `You are a grant- and partnership-intelligence analyst for climate and impact ventures operating in the United States. Your scope is FEDERAL and CALIFORNIA only — across every relevant domain (air, water, energy, climate disclosure, transportation, materials/circular economy, and cross-cutting).
+const SYSTEM_INTRO = `You are a regulatory-, grant-, and partnership-intelligence analyst for climate and impact ventures operating in the United States. Your scope is FEDERAL and CALIFORNIA only — across every relevant domain (air, water, energy, climate disclosure, transportation, materials/circular economy, and cross-cutting).
 
-You are given a catalog with two kinds of records:
+You are given a catalog with three kinds of records:
+- "regulation": rules a company may need to comply with.
 - "grant": grants, vouchers, rebates, loans, and tax credits a company could pursue.
 - "partner": ecosystem organizations (accelerators, incubators, fellowships, national labs) and capital partners (green banks, project finance, climate VC) a company could engage.
 
-(Specific regulations are handled separately by a live full-text search, so you do NOT rank regulations here.)
+(A separate live full-text search adds specific federal CFR sections and open rulemakings alongside the regulations you pick, so focus on the high-value named programs in the catalog.)
 
-Given a company description, select the records most relevant to that company across BOTH kinds, and explain specifically how each matters.
+Given a company description, select the records most relevant to that company across ALL THREE kinds, and explain specifically how each matters.
 
 Rules:
-- Only select records from the provided catalog. Never invent records, IDs, grants, or partners.
-- Aim for genuine breadth: surface relevant items from both kinds when they apply. Do not return only grants.
+- Only select records from the provided catalog. Never invent records, IDs, regulations, grants, or partners.
+- Aim for genuine breadth: surface relevant items from each of the three kinds when they apply. Do not return only regulations.
+- HONOR THE COMPANY PROFILE. The description may begin with a "Company profile:" block stating where the company operates (e.g. "Operating in California: Yes" and a county). Prioritize records in that jurisdiction. If the company is California-based, prefer California and federal records and do NOT surface programs specific to other states. If they are not operating in California, do not push California-only programs as top matches.
 - Rank by genuine relevance to THIS company. Return fewer items rather than padding with weak matches.
 - For each match, "whyRelevant" must be concrete and tailored — name the specific exposure, opportunity, or fit, not a generic restatement of the summary.
 - For each match, "checklist" is 3-4 short, high-level, company-specific action items (imperative voice, e.g. "Confirm your facility's potential-to-emit before signing a lease"). This is the at-a-glance summary of what to do next. Keep each item to one concise line.
@@ -68,7 +66,7 @@ const matchTool: Anthropic.Tool = {
     properties: {
       matches: {
         type: "array",
-        description: `Ranked most-relevant first, at most ${MAX_MATCHES} items, spanning grants and partners as relevant.`,
+        description: `Ranked most-relevant first, at most ${MAX_MATCHES} items, spanning regulations, grants, and partners as relevant.`,
         items: {
           type: "object",
           properties: {
@@ -177,7 +175,7 @@ export async function matchCompany(
       messages: [
         {
           role: "user",
-          content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across grants and partners, plus 2-3 multiple-choice follow-up questions.`,
+          content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across regulations, grants, and partners, plus 2-3 multiple-choice follow-up questions.`,
         },
       ],
     } as unknown as Anthropic.MessageStreamParams,
@@ -202,8 +200,7 @@ export async function matchCompany(
   const byId = new Map(records.map((r) => [r.id, r]));
 
   const matches: EnrichedMatch[] = (input.matches ?? [])
-    // Keep only catalog grants/partners; regulations are sourced live elsewhere.
-    .filter((m) => byId.get(m.id)?.type === "grant" || byId.get(m.id)?.type === "partner")
+    .filter((m) => byId.has(m.id))
     .slice(0, MAX_MATCHES)
     .map((m) => ({
       id: m.id,
