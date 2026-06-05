@@ -194,7 +194,8 @@ textarea:focus {
   color: var(--text-secondary);
 }
 
-.scoping-field select {
+.scoping-field select,
+.scoping-field input {
   width: 100%;
   padding: 12px 14px;
   border-radius: var(--radius-md);
@@ -206,12 +207,14 @@ textarea:focus {
   transition: border-color 0.2s;
 }
 
-.scoping-field select:focus {
+.scoping-field select:focus,
+.scoping-field input:focus {
   outline: none;
   border-color: var(--text-primary);
 }
 
-.scoping-field select:disabled {
+.scoping-field select:disabled,
+.scoping-field input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }

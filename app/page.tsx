@@ -213,18 +213,20 @@ export default function Home() {
 
             <label className="scoping-field">
               <span className="scoping-label">County of planned facility</span>
-              <select
+              <input
+                type="text"
+                list="county-options"
                 value={county}
                 onChange={(e) => setCounty(e.target.value)}
                 disabled={operatingCA === "No"}
-              >
-                <option value="">Select…</option>
+                placeholder="Type or select…"
+                autoComplete="off"
+              />
+              <datalist id="county-options">
                 {CA_COUNTY_OPTIONS.map((c) => (
-                  <option key={c} value={c}>
-                    {c}
-                  </option>
+                  <option key={c} value={c} />
                 ))}
-              </select>
+              </datalist>
             </label>
 
             <label className="scoping-field">
