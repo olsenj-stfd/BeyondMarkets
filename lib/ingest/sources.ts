@@ -217,6 +217,12 @@ const GRANTS_GOV_KEYWORDS = [
   "emissions",
   "environment",
   "decarbonization",
+  "energy efficiency",
+  "water",
+  "wildfire",
+  "transportation",
+  "environmental justice",
+  "resilience",
 ];
 
 export async function fetchGrantsGov(): Promise<OpportunityRow[]> {
