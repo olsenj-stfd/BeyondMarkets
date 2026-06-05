@@ -1,14 +1,14 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EnrichedMatch } from "@/lib/types";
+import type { EnrichedMatch, FollowUp } from "@/lib/types";
 import {
   getFavoriteIds,
   resolveRankedCache,
   type RankCacheEntry,
 } from "@/lib/opportunities";
 import Header from "@/app/components/Header";
-import { ResultBoard } from "@/app/components/Results";
+import ProjectAnalysis from "@/app/components/ProjectAnalysis";
 import ProjectDeadlines from "@/app/components/ProjectDeadlines";
 
 export const runtime = "nodejs";
@@ -18,6 +18,7 @@ interface Row {
   name: string;
   description: string;
   matches: EnrichedMatch[];
+  follow_ups: FollowUp[];
   ranked_opportunities: RankCacheEntry[];
   ranked_at: string | null;
   created_at: string;
@@ -38,7 +39,7 @@ export default async function ProjectPage({
   const { data } = await supabase
     .from("projects")
     .select(
-      "id, name, description, matches, ranked_opportunities, ranked_at, created_at",
+      "id, name, description, matches, follow_ups, ranked_opportunities, ranked_at, created_at",
     )
     .eq("id", id)
     .single();
@@ -72,7 +73,11 @@ export default async function ProjectPage({
         favoriteIds={favoriteIds}
       />
 
-      <ResultBoard matches={project.matches ?? []} />
+      <ProjectAnalysis
+        projectId={project.id}
+        initialMatches={project.matches ?? []}
+        initialFollowUps={project.follow_ups ?? []}
+      />
     </main>
   );
 }

@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import Link from "next/link";
-import type { EnrichedMatch, FollowUp } from "@/lib/types";
-import { createClient } from "@/lib/supabase/client";
+import type { RankedOpportunity } from "@/lib/types";
 import Header from "@/app/components/Header";
-import { ResultBoard } from "@/app/components/Results";
+import OpportunityCard from "@/app/components/OpportunityCard";
 
 const EXAMPLES = [
   "We build hydrogen fuel-cell powertrains for heavy-duty trucks, manufacturing pilot units in the Bay Area.",
@@ -107,6 +106,13 @@ function withProfile(
   return `Company profile:\n${lines.join("\n")}\n\n${description.trim()}`;
 }
 
+interface Result {
+  projectId: string;
+  name: string;
+  ranked: RankedOpportunity[];
+  deadlineError: string | null;
+}
+
 export default function Home() {
   const [description, setDescription] = useState("");
   const [operatingCA, setOperatingCA] = useState("");
@@ -114,31 +120,14 @@ export default function Home() {
   const [stage, setStage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [matches, setMatches] = useState<EnrichedMatch[] | null>(null);
-  const [followUps, setFollowUps] = useState<FollowUp[]>([]);
-  const [selections, setSelections] = useState<Record<number, string>>({});
-  const [followUpsOpen, setFollowUpsOpen] = useState(false);
-  const [refinements, setRefinements] = useState<string[]>([]);
-  const boardRef = useRef<HTMLDivElement>(null);
-
   const [elapsed, setElapsed] = useState(0);
-  const [signedIn, setSignedIn] = useState(false);
-  const [saveName, setSaveName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const [saveMsg, setSaveMsg] = useState<string | null>(null);
+  const [result, setResult] = useState<Result | null>(null);
+  const resultRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) return;
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => setSignedIn(!!data.user));
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) =>
-      setSignedIn(!!session?.user),
-    );
-    return () => sub.subscription.unsubscribe();
-  }, []);
-
-  async function runMatch(fullText: string) {
+  async function analyze(e: React.FormEvent) {
+    e.preventDefault();
     setError(null);
+    setResult(null);
     setLoading(true);
     setElapsed(0);
     const startedAt = Date.now();
@@ -147,116 +136,45 @@ export default function Home() {
       1000,
     );
     try {
-      const res = await fetch("/api/match", {
+      const fullText = withProfile(description, { operatingCA, county, stage });
+
+      // 1. Auto-save as a project (server generates a best-guess title).
+      const pRes = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ description: fullText }),
       });
-
-      // Validation/server errors come back as plain JSON, not a stream.
-      if (!res.ok || !res.body) {
-        const data = await res.json().catch(() => ({}));
-        setError(data.error ?? `Request failed (${res.status}).`);
-        return false;
+      const pData = await pRes.json().catch(() => ({}));
+      if (!pRes.ok || !pData.project) {
+        setError(pData.error ?? "Could not save your analysis. Please try again.");
+        return;
       }
+      const project = pData.project as { id: string; name: string };
 
-      const reader = res.body.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      let result: { matches?: EnrichedMatch[]; followUps?: FollowUp[] } | null = null;
-
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        let nl: number;
-        while ((nl = buffer.indexOf("\n")) >= 0) {
-          const line = buffer.slice(0, nl).trim();
-          buffer = buffer.slice(nl + 1);
-          if (!line) continue;
-          const msg = JSON.parse(line);
-          if (msg.t === "error") {
-            setError(msg.error ?? "Something went wrong. Please try again.");
-            return false;
-          }
-          if (msg.t === "done") result = msg;
-        }
-      }
-
-      if (!result) {
-        // Stream ended without a result — usually the function hit its time limit.
-        setError("The analysis took too long and timed out. Please try again.");
-        return false;
-      }
-
-      setMatches(result.matches ?? []);
-      setFollowUps(result.followUps ?? []);
-      setSelections({});
-      return true;
+      // 2. Rank upcoming deadlines for this venture (the primary first result).
+      const dRes = await fetch("/api/opportunities/match", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ projectId: project.id }),
+      });
+      const dData = await dRes.json().catch(() => ({}));
+      setResult({
+        projectId: project.id,
+        name: project.name,
+        ranked: dRes.ok ? (dData.ranked ?? []) : [],
+        deadlineError: dRes.ok ? null : (dData.error ?? "Could not load deadlines."),
+      });
+      requestAnimationFrame(() =>
+        resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }),
+      );
     } catch {
       setError("Network error. Please try again.");
-      return false;
     } finally {
       clearInterval(ticker);
       setLoading(false);
     }
   }
 
-  async function analyze(e: React.FormEvent) {
-    e.preventDefault();
-    setMatches(null);
-    setRefinements([]);
-    setSaveMsg(null);
-    const ok = await runMatch(withProfile(description, { operatingCA, county, stage }));
-    if (ok) setFollowUpsOpen(true);
-  }
-
-  async function refine() {
-    const newLines = followUps
-      .map((f, i) => (selections[i] ? `- ${f.question} → ${selections[i]}` : null))
-      .filter((x): x is string => x !== null);
-    if (newLines.length === 0) return;
-
-    const allRefinements = [...refinements, ...newLines];
-    setRefinements(allRefinements);
-    const base = withProfile(description, { operatingCA, county, stage });
-    const fullText = `${base}\n\nAdditional context:\n${allRefinements.join("\n")}`;
-    const ok = await runMatch(fullText);
-    if (ok) {
-      setFollowUpsOpen(false); // refine once; require explicit opt-in to go again
-      boardRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-  }
-
-  async function saveProject() {
-    if (!matches) return;
-    setSaving(true);
-    setSaveMsg(null);
-    try {
-      const name = saveName.trim() || description.trim().slice(0, 60);
-      const res = await fetch("/api/projects", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name,
-          description: withProfile(description, { operatingCA, county, stage }),
-          matches,
-          followUps,
-        }),
-      });
-      if (res.ok) {
-        setSaveMsg("Saved to your projects.");
-        setSaveName("");
-      } else {
-        const data = await res.json().catch(() => ({}));
-        setSaveMsg(data.error ?? "Could not save. Please try again.");
-      }
-    } finally {
-      setSaving(false);
-    }
-  }
-
-  const hasSelection = Object.keys(selections).length > 0;
   const profileComplete =
     operatingCA !== "" &&
     stage !== "" &&
@@ -268,8 +186,10 @@ export default function Home() {
 
       <section className="glass-card intro-card">
         <p className="intro-text">
-          Describe what your venture does. We&apos;ll surface the regulations you
-          may face, the grants you could pursue, and the partners worth knowing.
+          Describe what your venture does. We&apos;ll save it as a project and
+          surface the grant and comment-period deadlines that matter most — your
+          full landscape of regulations, funding, and partners lives on the
+          project page.
         </p>
         <form onSubmit={analyze}>
           <textarea
@@ -347,89 +267,54 @@ export default function Home() {
 
       {error && <div className="error">{error}</div>}
 
-      {matches && !followUpsOpen && followUps.length > 0 && (
-        <div className="refine-further">
-          <button type="button" className="pill-btn ghost" onClick={() => setFollowUpsOpen(true)}>
-            Refine further ↺
-          </button>
-        </div>
-      )}
-
-      {followUpsOpen && followUps.length > 0 && (
-        <section className="glass-card followups">
-          <h2>Refine your results</h2>
-          <p className="followups-sub">
-            Pick the answers that fit, then refine. (You can refine again afterward.)
-          </p>
-          {followUps.map((f, qi) => (
-            <div className="followup" key={qi}>
-              <span className="followup-q">{f.question}</span>
-              <div className="option-row">
-                {f.options.map((opt, oi) => (
-                  <button
-                    key={oi}
-                    type="button"
-                    className={`option ${selections[qi] === opt ? "selected" : ""}`}
-                    onClick={() =>
-                      setSelections((s) =>
-                        s[qi] === opt
-                          ? Object.fromEntries(Object.entries(s).filter(([k]) => k !== String(qi)))
-                          : { ...s, [qi]: opt },
-                      )
-                    }
-                  >
-                    {opt}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ))}
-          <button
-            type="button"
-            className="pill-btn"
-            onClick={refine}
-            disabled={loading || !hasSelection}
-          >
-            {loading ? `Refining… ${elapsed}s` : "Refine my results"}
-          </button>
-        </section>
-      )}
-
-      {matches && (
-        <div className="save-bar">
-          {signedIn ? (
-            <>
-              <input
-                className="save-name"
-                value={saveName}
-                onChange={(e) => setSaveName(e.target.value)}
-                placeholder="Name this project (optional)"
-              />
-              <button
-                type="button"
-                className="pill-btn"
-                onClick={saveProject}
-                disabled={saving}
-              >
-                {saving ? "Saving…" : "Save project"}
-              </button>
-            </>
-          ) : (
-            <p className="save-hint">
-              <Link href="/login">Sign in</Link> to save this analysis as a project.
+      {result && (
+        <div ref={resultRef}>
+          <section className="glass-card intro-card">
+            <span className="project-date">Saved as a project</span>
+            <h2 className="section-title">{result.name}</h2>
+            <p className="intro-text">
+              Your venture is saved. Open the project page for the full landscape
+              of regulations, funding opportunities, and partners.
             </p>
-          )}
-          {saveMsg && <span className="save-msg">{saveMsg}</span>}
+            <Link href={`/projects/${result.projectId}`} className="pill-btn">
+              Open full analysis →
+            </Link>
+          </section>
+
+          <section className="project-deadlines">
+            <div className="project-deadlines-head">
+              <h2 className="section-title">Upcoming deadlines for this venture</h2>
+            </div>
+
+            {result.deadlineError ? (
+              <div className="error">{result.deadlineError}</div>
+            ) : result.ranked.length === 0 ? (
+              <p className="empty">
+                No upcoming deadlines matched this venture yet. New opportunities
+                are ingested daily — check back, or open the project to refine.
+              </p>
+            ) : (
+              <ul className="opp-list">
+                {result.ranked.map((o) => (
+                  <OpportunityCard
+                    key={o.id}
+                    o={o}
+                    starred={false}
+                    onToggleStar={() => {}}
+                    canStar={false}
+                  />
+                ))}
+              </ul>
+            )}
+          </section>
         </div>
       )}
-
-      {matches && <ResultBoard matches={matches} boardRef={boardRef} />}
 
       <p className="disclaimer">
-        Prototype on a hand-curated federal + California dataset. Summaries and
-        timing notes are for orientation only — confirm specifics (especially
-        dates, deadlines, and workshop/hearing schedules) against the linked
-        official source before making a compliance or funding decision.
+        Prototype on a hand-curated federal + California dataset plus real, dated
+        deadlines from official sources. Confirm specifics (especially dates,
+        deadlines, and workshop/hearing schedules) against the linked official
+        source before making a compliance or funding decision.
       </p>
     </main>
   );

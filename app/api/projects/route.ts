@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { suggestProjectName } from "@/lib/match";
 import type { EnrichedMatch, FollowUp, Project } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -66,15 +67,18 @@ export async function POST(req: Request) {
     return NextResponse.json({ error: "Invalid JSON body." }, { status: 400 });
   }
 
-  const name = typeof body.name === "string" ? body.name.trim() : "";
   const description =
     typeof body.description === "string" ? body.description.trim() : "";
-  if (!name || !description) {
+  if (!description) {
     return NextResponse.json(
-      { error: "A name and description are required." },
+      { error: "A description is required." },
       { status: 400 },
     );
   }
+
+  // Auto-title: use the caller's name if given, else a best-guess label.
+  const provided = typeof body.name === "string" ? body.name.trim() : "";
+  const name = provided || (await suggestProjectName(description));
 
   const { data, error } = await supabase
     .from("projects")

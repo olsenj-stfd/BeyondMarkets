@@ -934,6 +934,15 @@ details.more[open] summary::before {
   gap: 12px;
 }
 
+.analysis-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+  margin: 8px 0 16px;
+}
+
 .notice {
   margin-bottom: 18px;
   padding: 14px 18px;

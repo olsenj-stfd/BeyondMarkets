@@ -118,6 +118,36 @@ const matchTool: Anthropic.Tool = {
   },
 };
 
+/**
+ * A fast, cheap best-guess label for a saved project, derived from the company
+ * description. Falls back to a truncation if the model call fails or there's no
+ * API key — the title is convenience, never worth failing the save over.
+ */
+export async function suggestProjectName(description: string): Promise<string> {
+  const fallback = description.trim().slice(0, 60) || "Untitled venture";
+  if (!process.env.ANTHROPIC_API_KEY) return fallback;
+  try {
+    const client = new Anthropic();
+    const msg = await client.messages.create({
+      model: "claude-haiku-4-5",
+      max_tokens: 40,
+      messages: [
+        {
+          role: "user",
+          content: `Write a short, specific project title (4-8 words, no quotes, no trailing period) that summarizes this venture for a saved-project label. Reply with only the title.\n\n${description}`,
+        },
+      ],
+    });
+    const text = msg.content.find(
+      (b): b is Anthropic.TextBlock => b.type === "text",
+    )?.text;
+    const name = (text ?? "").trim().replace(/^["']|["']$/g, "").slice(0, 80);
+    return name || fallback;
+  } catch {
+    return fallback;
+  }
+}
+
 export async function matchCompany(
   description: string,
   options?: { signal?: AbortSignal },
