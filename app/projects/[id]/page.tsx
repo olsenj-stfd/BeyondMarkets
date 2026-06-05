@@ -37,13 +37,24 @@ export default async function ProjectPage({
   } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
-  const { data } = await supabase
+  const baseCols =
+    "id, name, description, matches, follow_ups, ranked_opportunities, ranked_at, created_at";
+
+  // Select the live-regulations cache, but degrade gracefully if that column
+  // hasn't been migrated yet (otherwise a missing column would null the whole
+  // row and 404 the page).
+  let { data, error } = await supabase
     .from("projects")
-    .select(
-      "id, name, description, matches, follow_ups, regulations, ranked_opportunities, ranked_at, created_at",
-    )
+    .select(`${baseCols}, regulations`)
     .eq("id", id)
     .single();
+  if (error) {
+    ({ data } = await supabase
+      .from("projects")
+      .select(baseCols)
+      .eq("id", id)
+      .single());
+  }
 
   if (!data) notFound();
   const project = data as Row;
