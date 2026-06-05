@@ -176,6 +176,46 @@ textarea:focus {
   border-color: var(--text-primary);
 }
 
+.scoping {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.scoping-field {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.scoping-label {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.scoping-field select {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--border-soft);
+  background: var(--bg-solid);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 15px;
+  transition: border-color 0.2s;
+}
+
+.scoping-field select:focus {
+  outline: none;
+  border-color: var(--text-primary);
+}
+
+.scoping-field select:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 .row {
   display: flex;
   align-items: center;

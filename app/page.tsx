@@ -14,8 +14,104 @@ const EXAMPLES = [
   "We make compostable packaging from agricultural waste, sold to California food brands.",
 ];
 
+const CA_OPERATING = ["Yes", "Planning to", "No"];
+
+const COMPANY_STAGES = [
+  "Idea / pre-seed",
+  "Seed",
+  "Series A / growth",
+  "Scaling / established",
+];
+
+// "Not building" and "Statewide / multiple" first, then all 58 CA counties.
+const CA_COUNTY_OPTIONS = [
+  "Not building a facility",
+  "Statewide / multiple counties",
+  "Alameda",
+  "Alpine",
+  "Amador",
+  "Butte",
+  "Calaveras",
+  "Colusa",
+  "Contra Costa",
+  "Del Norte",
+  "El Dorado",
+  "Fresno",
+  "Glenn",
+  "Humboldt",
+  "Imperial",
+  "Inyo",
+  "Kern",
+  "Kings",
+  "Lake",
+  "Lassen",
+  "Los Angeles",
+  "Madera",
+  "Marin",
+  "Mariposa",
+  "Mendocino",
+  "Merced",
+  "Modoc",
+  "Mono",
+  "Monterey",
+  "Napa",
+  "Nevada",
+  "Orange",
+  "Placer",
+  "Plumas",
+  "Riverside",
+  "Sacramento",
+  "San Benito",
+  "San Bernardino",
+  "San Diego",
+  "San Francisco",
+  "San Joaquin",
+  "San Luis Obispo",
+  "San Mateo",
+  "Santa Barbara",
+  "Santa Clara",
+  "Santa Cruz",
+  "Shasta",
+  "Sierra",
+  "Siskiyou",
+  "Solano",
+  "Sonoma",
+  "Stanislaus",
+  "Sutter",
+  "Tehama",
+  "Trinity",
+  "Tulare",
+  "Tuolumne",
+  "Ventura",
+  "Yolo",
+  "Yuba",
+];
+
+/**
+ * Fold the structured scoping answers into the free-text description so the
+ * matcher can scope its database scrub (CA vs. federal-only, which regional air
+ * district / county programs apply, and how to weight grants vs. compliance by
+ * company stage). This block is prepended to the user's own words.
+ */
+function withProfile(
+  description: string,
+  profile: { operatingCA: string; county: string; stage: string },
+): string {
+  const lines = [
+    `- Operating in California: ${profile.operatingCA}`,
+    profile.operatingCA !== "No"
+      ? `- County of planned facility: ${profile.county}`
+      : null,
+    `- Company stage: ${profile.stage}`,
+  ].filter((x): x is string => x !== null);
+  return `Company profile:\n${lines.join("\n")}\n\n${description.trim()}`;
+}
+
 export default function Home() {
   const [description, setDescription] = useState("");
+  const [operatingCA, setOperatingCA] = useState("");
+  const [county, setCounty] = useState("");
+  const [stage, setStage] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [matches, setMatches] = useState<EnrichedMatch[] | null>(null);
@@ -111,7 +207,7 @@ export default function Home() {
     setMatches(null);
     setRefinements([]);
     setSaveMsg(null);
-    const ok = await runMatch(description);
+    const ok = await runMatch(withProfile(description, { operatingCA, county, stage }));
     if (ok) setFollowUpsOpen(true);
   }
 
@@ -123,7 +219,8 @@ export default function Home() {
 
     const allRefinements = [...refinements, ...newLines];
     setRefinements(allRefinements);
-    const fullText = `${description.trim()}\n\nAdditional context:\n${allRefinements.join("\n")}`;
+    const base = withProfile(description, { operatingCA, county, stage });
+    const fullText = `${base}\n\nAdditional context:\n${allRefinements.join("\n")}`;
     const ok = await runMatch(fullText);
     if (ok) {
       setFollowUpsOpen(false); // refine once; require explicit opt-in to go again
@@ -140,7 +237,12 @@ export default function Home() {
       const res = await fetch("/api/projects", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, description: description.trim(), matches, followUps }),
+        body: JSON.stringify({
+          name,
+          description: withProfile(description, { operatingCA, county, stage }),
+          matches,
+          followUps,
+        }),
       });
       if (res.ok) {
         setSaveMsg("Saved to your projects.");
@@ -155,6 +257,10 @@ export default function Home() {
   }
 
   const hasSelection = Object.keys(selections).length > 0;
+  const profileComplete =
+    operatingCA !== "" &&
+    stage !== "" &&
+    (operatingCA === "No" || county !== "");
 
   return (
     <main className="page">
@@ -171,6 +277,49 @@ export default function Home() {
             onChange={(e) => setDescription(e.target.value)}
             placeholder="e.g. We build zero-emission refrigerated trailers for regional grocery fleets, assembled in California…"
           />
+
+          <div className="scoping">
+            <label className="scoping-field">
+              <span className="scoping-label">Operating in California?</span>
+              <select value={operatingCA} onChange={(e) => setOperatingCA(e.target.value)}>
+                <option value="">Select…</option>
+                {CA_OPERATING.map((o) => (
+                  <option key={o} value={o}>
+                    {o}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="scoping-field">
+              <span className="scoping-label">County of planned facility</span>
+              <select
+                value={county}
+                onChange={(e) => setCounty(e.target.value)}
+                disabled={operatingCA === "No"}
+              >
+                <option value="">Select…</option>
+                {CA_COUNTY_OPTIONS.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </label>
+
+            <label className="scoping-field">
+              <span className="scoping-label">Company stage</span>
+              <select value={stage} onChange={(e) => setStage(e.target.value)}>
+                <option value="">Select…</option>
+                {COMPANY_STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {s}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+
           <div className="row">
             <div className="examples">
               {EXAMPLES.map((ex, i) => (
@@ -187,7 +336,7 @@ export default function Home() {
             <button
               className="pill-btn"
               type="submit"
-              disabled={loading || description.trim().length < 20}
+              disabled={loading || description.trim().length < 20 || !profileComplete}
             >
               {loading && <span className="spinner" />}
               {loading ? `Analyzing… ${elapsed}s` : "Analyze"}
