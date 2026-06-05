@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { suggestProjectName } from "@/lib/match";
 import type {
+  Consideration,
   EnrichedMatch,
   FollowUp,
   LiveRegResult,
@@ -17,6 +18,7 @@ interface ProjectRow {
   matches: EnrichedMatch[];
   follow_ups: FollowUp[];
   regulations?: LiveRegResult[];
+  considerations?: Consideration[];
   created_at: string;
 }
 
@@ -28,6 +30,7 @@ function toProject(row: ProjectRow): Project {
     matches: row.matches ?? [],
     followUps: row.follow_ups ?? [],
     regulations: row.regulations ?? [],
+    considerations: row.considerations ?? [],
     createdAt: row.created_at,
   };
 }

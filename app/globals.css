@@ -968,6 +968,73 @@ details.more[open] summary::before {
   font-size: 14px;
 }
 
+/* ───────── Things to consider (web digest) ───────── */
+.considerations {
+  margin-top: 24px;
+}
+
+.considerations-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.considerations-sub {
+  color: var(--text-secondary);
+  font-size: 14px;
+  margin: 6px 0 18px;
+}
+
+.consideration-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.consideration {
+  position: relative;
+  padding-left: 22px;
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.consideration::before {
+  content: "";
+  position: absolute;
+  left: 4px;
+  top: 9px;
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--accent-yellow);
+}
+
+.consideration-point {
+  color: var(--text-primary);
+}
+
+.consideration-source {
+  margin-left: 8px;
+  font-size: 13px;
+  color: var(--text-secondary);
+  white-space: nowrap;
+}
+
+.consideration-source a {
+  color: var(--text-secondary);
+  text-decoration: none;
+  border-bottom: 1px dotted var(--text-secondary);
+}
+
+.consideration-source a:hover {
+  color: var(--text-primary);
+}
+
 /* ───────── Save bar ───────── */
 .save-bar {
   display: flex;

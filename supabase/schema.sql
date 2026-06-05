@@ -10,6 +10,10 @@ create table if not exists public.projects (
   -- Live federal regulatory search results (eCFR sections + open Federal
   -- Register rulemakings): [{ id, source, kind, title, citation, ... }].
   regulations jsonb not null default '[]'::jsonb,
+  -- Live web-research digest ("things to consider"): [{ point, source, url }].
+  considerations jsonb not null default '[]'::jsonb,
+  -- When the web digest was last refreshed.
+  digested_at timestamptz,
   -- Cached opportunity ranking: [{ id, relevance, whyRelevant }]. Joined back
   -- to live `opportunities` on read so stale/expired items drop out.
   ranked_opportunities jsonb not null default '[]'::jsonb,
@@ -25,6 +29,10 @@ alter table public.projects
   add column if not exists ranked_at timestamptz;
 alter table public.projects
   add column if not exists regulations jsonb not null default '[]'::jsonb;
+alter table public.projects
+  add column if not exists considerations jsonb not null default '[]'::jsonb;
+alter table public.projects
+  add column if not exists digested_at timestamptz;
 
 create index if not exists projects_user_id_created_at_idx
   on public.projects (user_id, created_at desc);

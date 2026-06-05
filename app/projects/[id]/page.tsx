@@ -1,7 +1,12 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EnrichedMatch, FollowUp, LiveRegResult } from "@/lib/types";
+import type {
+  Consideration,
+  EnrichedMatch,
+  FollowUp,
+  LiveRegResult,
+} from "@/lib/types";
 import {
   getFavoriteIds,
   resolveRankedCache,
@@ -9,6 +14,7 @@ import {
 } from "@/lib/opportunities";
 import Header from "@/app/components/Header";
 import ProjectAnalysis from "@/app/components/ProjectAnalysis";
+import ProjectConsiderations from "@/app/components/ProjectConsiderations";
 import ProjectDeadlines from "@/app/components/ProjectDeadlines";
 
 export const runtime = "nodejs";
@@ -20,6 +26,7 @@ interface Row {
   matches: EnrichedMatch[];
   follow_ups: FollowUp[];
   regulations: LiveRegResult[];
+  considerations: Consideration[];
   ranked_opportunities: RankCacheEntry[];
   ranked_at: string | null;
   created_at: string;
@@ -40,12 +47,12 @@ export default async function ProjectPage({
   const baseCols =
     "id, name, description, matches, follow_ups, ranked_opportunities, ranked_at, created_at";
 
-  // Select the live-regulations cache, but degrade gracefully if that column
-  // hasn't been migrated yet (otherwise a missing column would null the whole
-  // row and 404 the page).
+  // Select the live-regulations and web-digest caches, but degrade gracefully
+  // if those columns haven't been migrated yet (otherwise a missing column
+  // would null the whole row and 404 the page).
   let { data, error } = await supabase
     .from("projects")
-    .select(`${baseCols}, regulations`)
+    .select(`${baseCols}, regulations, considerations`)
     .eq("id", id)
     .single();
   if (error) {
@@ -90,6 +97,11 @@ export default async function ProjectPage({
         initialMatches={project.matches ?? []}
         initialFollowUps={project.follow_ups ?? []}
         initialRegulations={project.regulations ?? []}
+      />
+
+      <ProjectConsiderations
+        projectId={project.id}
+        initialConsiderations={project.considerations ?? []}
       />
     </main>
   );

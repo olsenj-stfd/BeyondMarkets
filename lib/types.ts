@@ -129,6 +129,19 @@ export interface OpportunityRow {
   raw: unknown;
 }
 
+/**
+ * One "thing to consider" synthesized from a live web search of recent news,
+ * policy, funding, and market signals relevant to the venture. Grounded in a
+ * real source (never fabricated); the model attaches the source when it has one.
+ */
+export interface Consideration {
+  /** One concise, specific, actionable sentence. */
+  point: string;
+  /** Short source name, e.g. "Reuters" or "CARB". */
+  source: string | null;
+  url: string | null;
+}
+
 /** A saved analysis belonging to a signed-in user. */
 export interface Project {
   id: string;
@@ -137,5 +150,6 @@ export interface Project {
   matches: EnrichedMatch[];
   followUps: FollowUp[];
   regulations: LiveRegResult[];
+  considerations: Consideration[];
   createdAt: string;
 }
