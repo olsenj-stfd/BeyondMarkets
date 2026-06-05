@@ -483,6 +483,19 @@ textarea:focus {
   color: var(--text-secondary);
 }
 
+/* Live-regulation status badges */
+.badge-inforce {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.35);
+  color: #15803d;
+}
+
+.badge-proposed {
+  background: rgba(234, 179, 8, 0.14);
+  border-color: rgba(234, 179, 8, 0.4);
+  color: #a16207;
+}
+
 .why {
   margin-top: 14px;
   padding: 12px 14px;

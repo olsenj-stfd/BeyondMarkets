@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { matchCompany } from "@/lib/match";
+import { searchRegulations } from "@/lib/reg-search";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -59,16 +60,20 @@ export async function POST(
   const ac = new AbortController();
   const timeout = setTimeout(() => ac.abort(), ANALYSIS_TIMEOUT_MS);
   try {
-    const { matches, followUps } = await matchCompany(fullText, {
-      signal: ac.signal,
-    });
+    // Curated grant/partner ranking and live regulatory search run in parallel.
+    // searchRegulations never throws (degrades to []), so a transient source
+    // outage can't fail the whole analysis.
+    const [{ matches, followUps }, regulations] = await Promise.all([
+      matchCompany(fullText, { signal: ac.signal }),
+      searchRegulations(fullText),
+    ]);
 
     await supabase
       .from("projects")
-      .update({ matches, follow_ups: followUps })
+      .update({ matches, follow_ups: followUps, regulations })
       .eq("id", id);
 
-    return NextResponse.json({ matches, followUps });
+    return NextResponse.json({ matches, followUps, regulations });
   } catch (err) {
     const timedOut = ac.signal.aborted;
     console.error("project analyze error:", timedOut ? "timed out" : err);

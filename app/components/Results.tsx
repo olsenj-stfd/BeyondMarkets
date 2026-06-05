@@ -1,23 +1,38 @@
 "use client";
 
-import type { EnrichedMatch, RecordType } from "@/lib/types";
+import type { EnrichedMatch, LiveRegResult, RecordType } from "@/lib/types";
 
-const COLUMNS: { type: RecordType; label: string; blurb: string }[] = [
-  { type: "regulation", label: "Regulations", blurb: "Rules you may need to comply with" },
+const CURATED_COLUMNS: { type: RecordType; label: string; blurb: string }[] = [
   { type: "grant", label: "Ongoing Funding Opportunities", blurb: "Grants, rebates, loans & tax credits" },
   { type: "partner", label: "Potential Partners", blurb: "Ecosystem & capital partners" },
 ];
 
 export function ResultBoard({
   matches,
+  regulations,
   boardRef,
 }: {
   matches: EnrichedMatch[];
+  regulations: LiveRegResult[];
   boardRef?: React.Ref<HTMLDivElement>;
 }) {
   return (
     <section className="board" ref={boardRef}>
-      {COLUMNS.map((col) => {
+      <div className="column col-regulation">
+        <div className="column-head">
+          <h2>
+            Regulations <span className="count">{regulations.length}</span>
+          </h2>
+          <p>Specific federal rules, found live in eCFR &amp; the Federal Register</p>
+        </div>
+        {regulations.length === 0 ? (
+          <p className="empty">No specific federal regulations matched yet.</p>
+        ) : (
+          regulations.map((r) => <RegCard key={r.id} reg={r} />)
+        )}
+      </div>
+
+      {CURATED_COLUMNS.map((col) => {
         const items = matches.filter((m) => m.record.type === col.type);
         return (
           <div className={`column col-${col.type}`} key={col.type}>
@@ -36,6 +51,59 @@ export function ResultBoard({
         );
       })}
     </section>
+  );
+}
+
+/** A live regulation result (eCFR section or open Federal Register rulemaking). */
+function RegCard({ reg }: { reg: LiveRegResult }) {
+  const proposed = reg.kind === "proposed";
+  const deadline = reg.commentsCloseOn
+    ? new Date(reg.commentsCloseOn + "T00:00:00").toLocaleDateString()
+    : null;
+  return (
+    <article className="card">
+      <div className="card-top">
+        <h3>{reg.title}</h3>
+      </div>
+
+      <div className="badges">
+        <span className={`badge ${proposed ? "badge-proposed" : "badge-inforce"}`}>
+          {proposed ? "Open comment" : "In force"}
+        </span>
+        <span className="badge">{reg.citation}</span>
+        {reg.source === "ecfr" ? (
+          <span className="badge">eCFR</span>
+        ) : (
+          <span className="badge">Fed. Register</span>
+        )}
+      </div>
+
+      {reg.agency && <p className="why">{reg.agency}</p>}
+
+      {proposed && deadline && (
+        <div className="key-dates">
+          <h4>
+            <CalendarIcon /> Comment period
+          </h4>
+          <ul>
+            <li>Comments close {deadline}</li>
+          </ul>
+        </div>
+      )}
+
+      {reg.excerpt && (
+        <details className="more">
+          <summary>Matched text</summary>
+          <div className="more-body">
+            <p>&ldquo;{reg.excerpt}&rdquo;</p>
+          </div>
+        </details>
+      )}
+
+      <a href={reg.url} target="_blank" rel="noopener noreferrer">
+        Official source ↗
+      </a>
+    </article>
   );
 }
 

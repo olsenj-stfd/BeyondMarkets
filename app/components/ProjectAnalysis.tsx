@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { EnrichedMatch, FollowUp } from "@/lib/types";
+import type { EnrichedMatch, FollowUp, LiveRegResult } from "@/lib/types";
 import { ResultBoard } from "@/app/components/Results";
 
 export default function ProjectAnalysis({
   projectId,
   initialMatches,
   initialFollowUps,
+  initialRegulations,
 }: {
   projectId: string;
   initialMatches: EnrichedMatch[];
   initialFollowUps: FollowUp[];
+  initialRegulations: LiveRegResult[];
 }) {
   const [matches, setMatches] = useState<EnrichedMatch[]>(initialMatches);
   const [followUps, setFollowUps] = useState<FollowUp[]>(initialFollowUps);
+  const [regulations, setRegulations] =
+    useState<LiveRegResult[]>(initialRegulations);
   const [selections, setSelections] = useState<Record<number, string>>({});
   const [refinements, setRefinements] = useState<string[]>([]);
   const [followUpsOpen, setFollowUpsOpen] = useState(false);
@@ -40,6 +44,7 @@ export default function ProjectAnalysis({
         }
         setMatches(data.matches ?? []);
         setFollowUps(data.followUps ?? []);
+        setRegulations(data.regulations ?? []);
         setSelections({});
         return true;
       } catch {
@@ -142,7 +147,11 @@ export default function ProjectAnalysis({
           venture…
         </p>
       ) : (
-        <ResultBoard matches={matches} boardRef={boardRef} />
+        <ResultBoard
+          matches={matches}
+          regulations={regulations}
+          boardRef={boardRef}
+        />
       )}
     </>
   );

@@ -53,6 +53,32 @@ export interface EnrichedMatch extends MatchResult {
   record: RegRecord;
 }
 
+/**
+ * A specific regulation found via live full-text search of official federal
+ * sources (eCFR for in-force CFR sections, the Federal Register for open
+ * rulemakings). Replaces the curated "Regulations" column: every field comes
+ * from a real source with a citation and link — nothing is fabricated.
+ */
+export interface LiveRegResult {
+  /** Stable dedup/render key, derived from source + citation. */
+  id: string;
+  source: "ecfr" | "federal_register";
+  /** "in_force": a current CFR section. "proposed": an open rulemaking. */
+  kind: "in_force" | "proposed";
+  /** Human-readable heading, e.g. "Applicability; description of the lithium subcategory." */
+  title: string;
+  /** Citation, e.g. "40 CFR § 461.50" or the FR document number. */
+  citation: string;
+  agency: string | null;
+  /** Short snippet of the matched text, plain (no markup). */
+  excerpt: string;
+  url: string;
+  /** Proposed rules only: real comment-close date (ISO) from the FR API. */
+  commentsCloseOn: string | null;
+  /** Proposed rules only: publication date (ISO). */
+  publicationDate: string | null;
+}
+
 export type OpportunitySource =
   | "federal_register"
   | "regulations_gov"
@@ -110,5 +136,6 @@ export interface Project {
   description: string;
   matches: EnrichedMatch[];
   followUps: FollowUp[];
+  regulations: LiveRegResult[];
   createdAt: string;
 }

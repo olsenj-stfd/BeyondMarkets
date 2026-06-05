@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { notFound, redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
-import type { EnrichedMatch, FollowUp } from "@/lib/types";
+import type { EnrichedMatch, FollowUp, LiveRegResult } from "@/lib/types";
 import {
   getFavoriteIds,
   resolveRankedCache,
@@ -19,6 +19,7 @@ interface Row {
   description: string;
   matches: EnrichedMatch[];
   follow_ups: FollowUp[];
+  regulations: LiveRegResult[];
   ranked_opportunities: RankCacheEntry[];
   ranked_at: string | null;
   created_at: string;
@@ -39,7 +40,7 @@ export default async function ProjectPage({
   const { data } = await supabase
     .from("projects")
     .select(
-      "id, name, description, matches, follow_ups, ranked_opportunities, ranked_at, created_at",
+      "id, name, description, matches, follow_ups, regulations, ranked_opportunities, ranked_at, created_at",
     )
     .eq("id", id)
     .single();
@@ -77,6 +78,7 @@ export default async function ProjectPage({
         projectId={project.id}
         initialMatches={project.matches ?? []}
         initialFollowUps={project.follow_ups ?? []}
+        initialRegulations={project.regulations ?? []}
       />
     </main>
   );

@@ -7,6 +7,9 @@ create table if not exists public.projects (
   description text not null,
   matches jsonb not null default '[]'::jsonb,
   follow_ups jsonb not null default '[]'::jsonb,
+  -- Live federal regulatory search results (eCFR sections + open Federal
+  -- Register rulemakings): [{ id, source, kind, title, citation, ... }].
+  regulations jsonb not null default '[]'::jsonb,
   -- Cached opportunity ranking: [{ id, relevance, whyRelevant }]. Joined back
   -- to live `opportunities` on read so stale/expired items drop out.
   ranked_opportunities jsonb not null default '[]'::jsonb,
@@ -20,6 +23,8 @@ alter table public.projects
   add column if not exists ranked_opportunities jsonb not null default '[]'::jsonb;
 alter table public.projects
   add column if not exists ranked_at timestamptz;
+alter table public.projects
+  add column if not exists regulations jsonb not null default '[]'::jsonb;
 
 create index if not exists projects_user_id_created_at_idx
   on public.projects (user_id, created_at desc);

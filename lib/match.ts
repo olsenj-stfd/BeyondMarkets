@@ -16,7 +16,11 @@ const MAX_OUTPUT_TOKENS = 3072;
  */
 function datasetForPrompt(): string {
   return JSON.stringify(
-    records.map((r) => ({
+    // Regulations are now sourced live (eCFR + Federal Register) in the
+    // Regulations column, so the curated matcher only ranks grants + partners.
+    records
+      .filter((r) => r.type !== "regulation")
+      .map((r) => ({
       id: r.id,
       type: r.type,
       title: r.title,
@@ -31,18 +35,19 @@ function datasetForPrompt(): string {
   );
 }
 
-const SYSTEM_INTRO = `You are a regulatory-, grant-, and partnership-intelligence analyst for climate and impact ventures operating in the United States. Your scope is FEDERAL and CALIFORNIA only — across every relevant domain (air, water, energy, climate disclosure, transportation, materials/circular economy, and cross-cutting).
+const SYSTEM_INTRO = `You are a grant- and partnership-intelligence analyst for climate and impact ventures operating in the United States. Your scope is FEDERAL and CALIFORNIA only — across every relevant domain (air, water, energy, climate disclosure, transportation, materials/circular economy, and cross-cutting).
 
-You are given a catalog with three kinds of records:
-- "regulation": rules a company may need to comply with.
+You are given a catalog with two kinds of records:
 - "grant": grants, vouchers, rebates, loans, and tax credits a company could pursue.
 - "partner": ecosystem organizations (accelerators, incubators, fellowships, national labs) and capital partners (green banks, project finance, climate VC) a company could engage.
 
-Given a company description, select the records most relevant to that company across ALL THREE kinds, and explain specifically how each matters.
+(Specific regulations are handled separately by a live full-text search, so you do NOT rank regulations here.)
+
+Given a company description, select the records most relevant to that company across BOTH kinds, and explain specifically how each matters.
 
 Rules:
-- Only select records from the provided catalog. Never invent records, IDs, regulations, grants, or partners.
-- Aim for genuine breadth: surface relevant items from each of the three kinds when they apply. Do not return only regulations.
+- Only select records from the provided catalog. Never invent records, IDs, grants, or partners.
+- Aim for genuine breadth: surface relevant items from both kinds when they apply. Do not return only grants.
 - Rank by genuine relevance to THIS company. Return fewer items rather than padding with weak matches.
 - For each match, "whyRelevant" must be concrete and tailored — name the specific exposure, opportunity, or fit, not a generic restatement of the summary.
 - For each match, "checklist" is 3-4 short, high-level, company-specific action items (imperative voice, e.g. "Confirm your facility's potential-to-emit before signing a lease"). This is the at-a-glance summary of what to do next. Keep each item to one concise line.
@@ -63,7 +68,7 @@ const matchTool: Anthropic.Tool = {
     properties: {
       matches: {
         type: "array",
-        description: `Ranked most-relevant first, at most ${MAX_MATCHES} items, spanning regulations, grants, and partners as relevant.`,
+        description: `Ranked most-relevant first, at most ${MAX_MATCHES} items, spanning grants and partners as relevant.`,
         items: {
           type: "object",
           properties: {
@@ -172,7 +177,7 @@ export async function matchCompany(
       messages: [
         {
           role: "user",
-          content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across regulations, grants, and partners, plus 2-3 multiple-choice follow-up questions.`,
+          content: `Company description:\n\n${description}\n\nReturn the most relevant catalog records (at most ${MAX_MATCHES}) across grants and partners, plus 2-3 multiple-choice follow-up questions.`,
         },
       ],
     } as unknown as Anthropic.MessageStreamParams,
@@ -197,7 +202,8 @@ export async function matchCompany(
   const byId = new Map(records.map((r) => [r.id, r]));
 
   const matches: EnrichedMatch[] = (input.matches ?? [])
-    .filter((m) => byId.has(m.id))
+    // Keep only catalog grants/partners; regulations are sourced live elsewhere.
+    .filter((m) => byId.get(m.id)?.type === "grant" || byId.get(m.id)?.type === "partner")
     .slice(0, MAX_MATCHES)
     .map((m) => ({
       id: m.id,

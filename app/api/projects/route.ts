@@ -1,7 +1,12 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { suggestProjectName } from "@/lib/match";
-import type { EnrichedMatch, FollowUp, Project } from "@/lib/types";
+import type {
+  EnrichedMatch,
+  FollowUp,
+  LiveRegResult,
+  Project,
+} from "@/lib/types";
 
 export const runtime = "nodejs";
 
@@ -11,6 +16,7 @@ interface ProjectRow {
   description: string;
   matches: EnrichedMatch[];
   follow_ups: FollowUp[];
+  regulations?: LiveRegResult[];
   created_at: string;
 }
 
@@ -21,6 +27,7 @@ function toProject(row: ProjectRow): Project {
     description: row.description,
     matches: row.matches ?? [],
     followUps: row.follow_ups ?? [],
+    regulations: row.regulations ?? [],
     createdAt: row.created_at,
   };
 }
