@@ -17,7 +17,20 @@ export function ResultBoard({
   boardRef?: React.Ref<HTMLDivElement>;
 }) {
   const curatedRegs = matches.filter((m) => m.record.type === "regulation");
-  const regCount = curatedRegs.length + regulations.length;
+  // Open comment periods are time-sensitive and actionable, so rank them to
+  // the top of the column (soonest deadline first), then everything else.
+  const orderedRegs = [...regulations].sort((a, b) => {
+    const aOpen = a.kind === "proposed";
+    const bOpen = b.kind === "proposed";
+    if (aOpen !== bOpen) return aOpen ? -1 : 1;
+    if (aOpen && bOpen) {
+      return (a.commentsCloseOn ?? "9999").localeCompare(
+        b.commentsCloseOn ?? "9999",
+      );
+    }
+    return 0;
+  });
+  const regCount = curatedRegs.length + orderedRegs.length;
   return (
     <section className="board" ref={boardRef}>
       <div className="column col-regulation">
@@ -31,12 +44,19 @@ export function ResultBoard({
           <p className="empty">No regulations matched this venture yet.</p>
         ) : (
           <>
+            {orderedRegs
+              .filter((r) => r.kind === "proposed")
+              .map((r) => (
+                <RegCard key={r.id} reg={r} />
+              ))}
             {curatedRegs.map((m) => (
               <ResultCard key={m.id} match={m} />
             ))}
-            {regulations.map((r) => (
-              <RegCard key={r.id} reg={r} />
-            ))}
+            {orderedRegs
+              .filter((r) => r.kind !== "proposed")
+              .map((r) => (
+                <RegCard key={r.id} reg={r} />
+              ))}
           </>
         )}
       </div>

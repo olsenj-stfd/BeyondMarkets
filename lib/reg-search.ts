@@ -256,10 +256,11 @@ async function searchFederalRegister(query: string): Promise<LiveRegResult[]> {
 
 /**
  * Orchestrate the full live search: extract focused phrases, fan out to both
- * sources in parallel, dedup, and cap. In-force sections are sorted by source
- * relevance (search order); open proposed rules are sorted by soonest comment
- * deadline (most actionable first). Returns [] on total failure — never throws,
- * so an analysis still renders its grant/partner columns.
+ * sources in parallel, dedup, and cap. Open proposed rules come FIRST (a live
+ * comment period is the most actionable, time-sensitive item), sorted by
+ * soonest comment deadline; in-force sections follow in source-relevance order.
+ * Returns [] on total failure — never throws, so an analysis still renders its
+ * grant/partner columns.
  */
 export async function searchRegulations(
   description: string,
@@ -295,8 +296,8 @@ export async function searchRegulations(
     );
 
     return [
-      ...inForce.slice(0, MAX_IN_FORCE),
       ...proposed.slice(0, MAX_PROPOSED),
+      ...inForce.slice(0, MAX_IN_FORCE),
     ];
   } catch {
     return [];
