@@ -44,6 +44,12 @@ export default function Header() {
               <Link href="/projects" className="nav-link">
                 My projects
               </Link>
+              <Link href="/portfolios" className="nav-link">
+                Portfolios
+              </Link>
+              <Link href="/feedback" className="nav-link">
+                Feedback
+              </Link>
               <span className="user-email" title={email}>
                 {email}
               </span>

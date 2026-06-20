@@ -142,6 +142,64 @@ export interface Consideration {
   url: string | null;
 }
 
+/**
+ * Portfolio mode (for VCs / platform teams): score a set of companies on the
+ * non-dilutive capital and regulatory dimensions, grounded in real dated
+ * opportunities. The qualitative axes (regClimate, policyRisk) are explicitly
+ * model assessments; the `opportunities` list is real (dates + links).
+ */
+
+export type RegClimate = "tailwind" | "neutral" | "headwind";
+
+/** A real, dated opportunity selected as evidence behind a company's score. */
+export interface ScoredOpportunity {
+  id: string;
+  title: string;
+  type: OpportunityType;
+  agency: string | null;
+  deadline: string | null;
+  url: string;
+  relevance: number; // 0-100
+  whyRelevant: string;
+}
+
+export interface CompanyScore {
+  /** 0-100: how much accessible non-dilutive capital / programs are within reach. */
+  nonDilutive: number;
+  /** Direction of the regulatory environment for this venture. */
+  regClimate: RegClimate;
+  regRationale: string;
+  /** 0-100: dependence on policy/subsidy that could change (higher = riskier). */
+  policyRisk: number;
+  policyRationale: string;
+  /** Named policy/subsidy dependencies to watch. */
+  dependencies: string[];
+  /** One-line synthesis. */
+  summary: string;
+  /** Real, dated programs/rules grounding the scores (deadlines + links). */
+  opportunities: ScoredOpportunity[];
+}
+
+/** One company in a portfolio, with its (optional, lazily computed) score. */
+export interface PortfolioCompany {
+  id: string;
+  name: string;
+  description: string;
+  sector: string | null;
+  stage: string | null;
+  geography: string | null;
+  score: CompanyScore | null;
+  scoredAt: string | null;
+}
+
+/** A named set of companies a signed-in user assesses together. */
+export interface Portfolio {
+  id: string;
+  name: string;
+  companies: PortfolioCompany[];
+  createdAt: string;
+}
+
 /** A saved analysis belonging to a signed-in user. */
 export interface Project {
   id: string;
