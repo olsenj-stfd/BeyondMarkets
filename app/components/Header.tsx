@@ -38,14 +38,17 @@ export default function Header() {
         {ready &&
           (email ? (
             <>
+              <Link href="/" className="nav-link">
+                Portfolios
+              </Link>
+              <Link href="/assess" className="nav-link">
+                Quick assessment
+              </Link>
               <Link href="/dashboard" className="nav-link">
                 Deadlines
               </Link>
               <Link href="/projects" className="nav-link">
                 My projects
-              </Link>
-              <Link href="/portfolios" className="nav-link">
-                Portfolios
               </Link>
               <Link href="/feedback" className="nav-link">
                 Feedback

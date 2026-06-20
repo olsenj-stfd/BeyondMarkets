@@ -1451,6 +1451,46 @@ details.more[open] summary::before {
   color: var(--text-secondary);
 }
 
+/* Input mode tabs */
+.mode-tabs {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.mode-tab {
+  border: 1px solid var(--line);
+  background: var(--bg-solid);
+  color: var(--text-secondary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 8px 14px;
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.mode-tab.active {
+  background: var(--accent-yellow);
+  border-color: var(--accent-yellow);
+  color: var(--text-primary);
+}
+
+.badge-link {
+  text-decoration: none;
+  color: var(--text-secondary);
+}
+
+.badge-link:hover {
+  color: var(--text-primary);
+}
+
+.company-desc {
+  margin-top: 10px;
+  line-height: 1.5;
+}
+
 /* Regulatory-climate badges */
 .badge-tailwind {
   background: rgba(34, 197, 94, 0.12);

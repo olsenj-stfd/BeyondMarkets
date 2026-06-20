@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { getUpcomingOpportunities } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
+import { enrichCompany } from "@/lib/enrich";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -68,14 +69,39 @@ export async function POST(
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), SCORE_TIMEOUT_MS);
   try {
+    // Paste-a-list-of-names flow: web-enrich the profile before scoring.
+    let working = companies[idx];
+    if (!working.description || working.description.trim().length < 10) {
+      const profile = await enrichCompany(working.name, working.website, {
+        signal: ac.signal,
+      });
+      working = {
+        ...working,
+        description: profile.description ?? working.description,
+        sector: working.sector ?? profile.sector,
+        stage: working.stage ?? profile.stage,
+        geography: working.geography ?? profile.geography,
+        website: working.website ?? profile.website,
+        profileSource: "web",
+      };
+      if (!working.description || working.description.trim().length < 10) {
+        return NextResponse.json(
+          {
+            error: `Couldn't find enough about "${working.name}" on the web. Add a short description and re-score.`,
+          },
+          { status: 422 },
+        );
+      }
+    }
+
     const opportunities = await getUpcomingOpportunities();
-    const score = await scoreCompany(companies[idx], opportunities, {
+    const score = await scoreCompany(working, opportunities, {
       signal: ac.signal,
     });
 
     const scoredAt = new Date().toISOString();
     const updated = companies.map((c, i) =>
-      i === idx ? { ...c, score, scoredAt } : c,
+      i === idx ? { ...working, score, scoredAt } : c,
     );
     await supabase
       .from("portfolios")

@@ -70,19 +70,24 @@ export async function POST(req: Request) {
   const name = str(body.name) || "Untitled portfolio";
   const rawCompanies = Array.isArray(body.companies) ? body.companies : [];
 
+  // A company needs a name. A description is optional: if it's missing, the
+  // company is web-enriched at scoring time (paste-a-list-of-names flow).
   const companies: PortfolioCompany[] = rawCompanies
     .map((c): PortfolioCompany | null => {
       const obj = (c ?? {}) as Record<string, unknown>;
       const cname = str(obj.name);
-      const description = str(obj.description);
-      if (!cname || description.length < 10) return null;
+      if (!cname) return null;
+      const description = str(obj.description) ?? "";
+      const website = str(obj.website);
       return {
         id: randomUUID(),
         name: cname,
         description,
-        sector: str(obj.sector) || null,
-        stage: str(obj.stage) || null,
-        geography: str(obj.geography) || null,
+        sector: str(obj.sector),
+        stage: str(obj.stage),
+        geography: str(obj.geography),
+        website,
+        profileSource: description.length >= 10 ? "manual" : "web",
         score: null,
         scoredAt: null,
       };
@@ -92,7 +97,7 @@ export async function POST(req: Request) {
 
   if (companies.length === 0) {
     return NextResponse.json(
-      { error: "Add at least one company with a name and a short description." },
+      { error: "Add at least one company with a name." },
       { status: 400 },
     );
   }

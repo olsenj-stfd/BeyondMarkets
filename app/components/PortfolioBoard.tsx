@@ -210,6 +210,23 @@ export default function PortfolioBoard({
                     {c.sector && <span className="badge">{c.sector}</span>}
                     {c.stage && <span className="badge">{c.stage}</span>}
                     {c.geography && <span className="badge">{c.geography}</span>}
+                    {c.profileSource === "web" && c.description && (
+                      <span className="badge">web-profiled</span>
+                    )}
+                    {c.website && (
+                      <a
+                        className="badge badge-link"
+                        href={
+                          /^https?:\/\//.test(c.website)
+                            ? c.website
+                            : `https://${c.website}`
+                        }
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        site ↗
+                      </a>
+                    )}
                   </div>
                 </div>
                 {s && (
@@ -219,8 +236,12 @@ export default function PortfolioBoard({
                 )}
               </div>
 
+              {c.description && <p className="muted company-desc">{c.description}</p>}
+
               {isScoring ? (
-                <p className="empty">Scoring…</p>
+                <p className="empty">
+                  {!c.description ? "Researching & scoring…" : "Scoring…"}
+                </p>
               ) : err ? (
                 <div className="error">
                   {err}{" "}

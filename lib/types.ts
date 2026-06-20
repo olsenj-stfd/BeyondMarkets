@@ -188,6 +188,10 @@ export interface PortfolioCompany {
   sector: string | null;
   stage: string | null;
   geography: string | null;
+  /** Optional homepage, used to ground web enrichment. */
+  website: string | null;
+  /** How the profile was produced: manual entry / CSV, or web-search draft. */
+  profileSource: "manual" | "web";
   score: CompanyScore | null;
   scoredAt: string | null;
 }
