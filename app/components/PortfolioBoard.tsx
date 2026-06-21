@@ -1,7 +1,40 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { PortfolioCompany, RegClimate } from "@/lib/types";
+import type {
+  PortfolioCompany,
+  RegClimate,
+  ScoredOpportunity,
+} from "@/lib/types";
+
+// Noise words that don't help tell two programs apart, so they're dropped
+// before comparing titles for fuzzy grouping.
+const STOP = new Set([
+  "the", "of", "and", "for", "a", "an", "to", "in", "on", "fy", "program",
+  "programs", "grant", "grants", "funding", "opportunity", "opportunities",
+  "notice", "proposed", "rule", "rules", "act", "federal", "state", "request",
+  "proposals", "application", "applications", "department", "office", "fiscal",
+  "year", "2024", "2025", "2026", "2027", "2028",
+]);
+
+function titleTokens(title: string): Set<string> {
+  return new Set(
+    title
+      .toLowerCase()
+      .replace(/[^a-z0-9\s]/g, " ")
+      .split(/\s+/)
+      .filter((w) => w.length > 2 && !STOP.has(w)),
+  );
+}
+
+function jaccard(a: Set<string>, b: Set<string>): number {
+  if (a.size === 0 || b.size === 0) return 0;
+  let inter = 0;
+  for (const x of a) if (b.has(x)) inter++;
+  return inter / (a.size + b.size - inter);
+}
+
+const TITLE_SIM_THRESHOLD = 0.6;
 
 const CLIMATE_LABEL: Record<RegClimate, string> = {
   tailwind: "Tailwind",
@@ -117,23 +150,36 @@ export default function PortfolioBoard({
   horizon.setDate(horizon.getDate() + 90);
   const horizonIso = horizon.toISOString().slice(0, 10);
   const todayIso = new Date().toISOString().slice(0, 10);
-  type Action = {
-    opp: NonNullable<(typeof scored)[number]["score"]>["opportunities"][number];
+  // Fuzzy-cluster the same program across companies: merge on identical id or
+  // URL, or on a matching deadline + similar title (so duplicate records of one
+  // program from different sources collapse into a single action).
+  type Cluster = {
+    opp: ScoredOpportunity;
     companies: string[];
+    tokens: Set<string>;
   };
-  const grouped = new Map<string, Action>();
+  const clusters: Cluster[] = [];
   for (const c of scored) {
     for (const o of c.score?.opportunities ?? []) {
       if (!o.deadline || o.deadline < todayIso || o.deadline > horizonIso) continue;
-      const existing = grouped.get(o.id);
-      if (existing) {
-        if (!existing.companies.includes(c.name)) existing.companies.push(c.name);
+      const tokens = titleTokens(o.title);
+      const match = clusters.find(
+        (cl) =>
+          cl.opp.id === o.id ||
+          (!!o.url && cl.opp.url === o.url) ||
+          (cl.opp.deadline === o.deadline &&
+            jaccard(cl.tokens, tokens) >= TITLE_SIM_THRESHOLD),
+      );
+      if (match) {
+        if (!match.companies.includes(c.name)) match.companies.push(c.name);
+        // Keep the representative with the most evidence (highest relevance).
+        if (o.relevance > match.opp.relevance) match.opp = o;
       } else {
-        grouped.set(o.id, { opp: o, companies: [c.name] });
+        clusters.push({ opp: o, companies: [c.name], tokens });
       }
     }
   }
-  const actions = [...grouped.values()]
+  const actions = clusters
     .sort((a, b) => (a.opp.deadline! < b.opp.deadline! ? -1 : 1))
     .slice(0, 12);
 
