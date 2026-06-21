@@ -110,19 +110,30 @@ export default function PortfolioBoard({
   );
   const highRisk = scored.filter((c) => (c.score?.policyRisk ?? 0) >= 67);
 
-  // Cross-portfolio "act this quarter": real dated items in the next 90 days.
+  // Cross-portfolio "act this quarter": real dated items in the next 90 days,
+  // with the SAME program rolled up into one action listing every affected
+  // company (so a shared grant deadline appears once, not per portco).
   const horizon = new Date();
   horizon.setDate(horizon.getDate() + 90);
   const horizonIso = horizon.toISOString().slice(0, 10);
   const todayIso = new Date().toISOString().slice(0, 10);
-  const actions = scored
-    .flatMap((c) =>
-      (c.score?.opportunities ?? [])
-        .filter(
-          (o) => o.deadline && o.deadline >= todayIso && o.deadline <= horizonIso,
-        )
-        .map((o) => ({ company: c.name, opp: o })),
-    )
+  type Action = {
+    opp: NonNullable<(typeof scored)[number]["score"]>["opportunities"][number];
+    companies: string[];
+  };
+  const grouped = new Map<string, Action>();
+  for (const c of scored) {
+    for (const o of c.score?.opportunities ?? []) {
+      if (!o.deadline || o.deadline < todayIso || o.deadline > horizonIso) continue;
+      const existing = grouped.get(o.id);
+      if (existing) {
+        if (!existing.companies.includes(c.name)) existing.companies.push(c.name);
+      } else {
+        grouped.set(o.id, { opp: o, companies: [c.name] });
+      }
+    }
+  }
+  const actions = [...grouped.values()]
     .sort((a, b) => (a.opp.deadline! < b.opp.deadline! ? -1 : 1))
     .slice(0, 12);
 
@@ -156,10 +167,20 @@ export default function PortfolioBoard({
           </div>
           <div className="glass-card stat">
             <span className="stat-label">Regulatory climate</span>
-            <span className="stat-value">
-              {climateCounts.tailwind}↑ {climateCounts.neutral}· {climateCounts.headwind}↓
-            </span>
-            <span className="stat-sub">tailwind · neutral · headwind</span>
+            <div className="climate-breakdown">
+              <span className="climate-row">
+                <i className="dot dot-tailwind" />
+                <b>{climateCounts.tailwind}</b> tailwind
+              </span>
+              <span className="climate-row">
+                <i className="dot dot-neutral" />
+                <b>{climateCounts.neutral}</b> neutral
+              </span>
+              <span className="climate-row">
+                <i className="dot dot-headwind" />
+                <b>{climateCounts.headwind}</b> headwind
+              </span>
+            </div>
           </div>
           <div className="glass-card stat">
             <span className="stat-label">High policy risk</span>
@@ -176,18 +197,21 @@ export default function PortfolioBoard({
           <h3 className="section-title">Act this quarter</h3>
           <p className="muted">Real deadlines in the next 90 days across the book.</p>
           <ul className="act-list">
-            {actions.map(({ company, opp }) => (
-              <li key={`${company}-${opp.id}`} className="act-item">
+            {actions.map(({ opp, companies: affected }) => (
+              <li key={opp.id} className="act-item">
                 <span className="act-deadline">{fmtDate(opp.deadline)}</span>
                 <span className="act-body">
                   <a href={opp.url} target="_blank" rel="noopener noreferrer">
                     {opp.title}
                   </a>
                   <span className="act-meta">
-                    {company}
-                    {opp.agency ? ` · ${opp.agency}` : ""} ·{" "}
+                    {opp.agency ? `${opp.agency} · ` : ""}
                     {opp.type === "grant_deadline" ? "Grant" : "Comment period"}
+                    {` · ${affected.length} ${
+                      affected.length === 1 ? "company" : "companies"
+                    }`}
                   </span>
+                  <span className="act-companies">{affected.join(", ")}</span>
                 </span>
               </li>
             ))}

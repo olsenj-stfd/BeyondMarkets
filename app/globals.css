@@ -1350,6 +1350,53 @@ details.more[open] summary::before {
   color: var(--text-secondary);
 }
 
+.act-companies {
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Regulatory-climate breakdown (rollup stat) */
+.climate-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.climate-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.climate-row b {
+  color: var(--text-primary);
+  font-weight: 600;
+  min-width: 20px;
+}
+
+.dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.dot-tailwind {
+  background: #22c55e;
+}
+
+.dot-neutral {
+  background: rgba(28, 28, 28, 0.35);
+}
+
+.dot-headwind {
+  background: #ef4444;
+}
+
 /* Company cards */
 .company-cards {
   display: flex;
