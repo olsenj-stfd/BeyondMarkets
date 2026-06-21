@@ -192,6 +192,10 @@ export interface PortfolioCompany {
   website: string | null;
   /** How the profile was produced: manual entry / CSV, or web-search draft. */
   profileSource: "manual" | "web";
+  /** Exit status from web research: IPO, acquired, shutdown, private, unknown. */
+  exitType: "ipo" | "acquired" | "shutdown" | "private" | "unknown" | null;
+  /** Short exit detail, e.g. "Acquired by Stripe (2023)". */
+  exitNote: string | null;
   score: CompanyScore | null;
   scoredAt: string | null;
 }

@@ -3,7 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { getUpcomingOpportunities } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
-import { enrichCompany } from "@/lib/enrich";
+import { enrichCompany, checkExit } from "@/lib/enrich";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -69,7 +69,9 @@ export async function POST(
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), SCORE_TIMEOUT_MS);
   try {
-    // Paste-a-list-of-names flow: web-enrich the profile before scoring.
+    // Paste-a-list-of-names flow: web-enrich the profile before scoring. The
+    // enrichment also checks for an IPO/acquisition/shutdown. For companies we
+    // already have a description for, run a dedicated exit check instead.
     let working = companies[idx];
     if (!working.description || working.description.trim().length < 10) {
       const profile = await enrichCompany(working.name, working.website, {
@@ -82,6 +84,8 @@ export async function POST(
         stage: working.stage ?? profile.stage,
         geography: working.geography ?? profile.geography,
         website: working.website ?? profile.website,
+        exitType: profile.exitType,
+        exitNote: profile.exitNote,
         profileSource: "web",
       };
       if (!working.description || working.description.trim().length < 10) {
@@ -92,6 +96,11 @@ export async function POST(
           { status: 422 },
         );
       }
+    } else {
+      const exit = await checkExit(working.name, working.website, {
+        signal: ac.signal,
+      });
+      working = { ...working, exitType: exit.exitType, exitNote: exit.exitNote };
     }
 
     const opportunities = await getUpcomingOpportunities();

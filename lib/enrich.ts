@@ -12,7 +12,35 @@ const MODEL = "claude-sonnet-4-6";
 const MAX_OUTPUT_TOKENS = 1024;
 const MAX_SEARCHES = 3;
 
-export interface CompanyProfile {
+export type ExitType =
+  | "ipo"
+  | "acquired"
+  | "shutdown"
+  | "private"
+  | "unknown";
+
+const EXIT_TYPES: ExitType[] = [
+  "ipo",
+  "acquired",
+  "shutdown",
+  "private",
+  "unknown",
+];
+
+function asExitType(v: unknown): ExitType | null {
+  return typeof v === "string" && (EXIT_TYPES as string[]).includes(v)
+    ? (v as ExitType)
+    : null;
+}
+
+export interface ExitInfo {
+  /** Whether the company has IPO'd, been acquired, shut down, or is private. */
+  exitType: ExitType | null;
+  /** Short detail, e.g. "Acquired by Stripe (2023)" or "IPO Nasdaq 2024". */
+  exitNote: string | null;
+}
+
+export interface CompanyProfile extends ExitInfo {
   description: string | null;
   sector: string | null;
   stage: string | null;
@@ -29,6 +57,7 @@ Rules:
 - stage: rough funding stage if discoverable ("Seed", "Series A", etc.), else null.
 - geography: HQ or main operating location if discoverable, else null.
 - website: the official homepage URL if found, else null.
+- Search specifically for whether the company has had an exit event — an IPO, an acquisition/merger, or a shutdown/wind-down. Set exitType to "ipo", "acquired", "shutdown", "private" (clearly still operating independently), or "unknown" (can't tell). Put a short detail in exitNote with the year and counterparty if known (e.g. "Acquired by Stripe (2023)", "IPO Nasdaq 2024", "Ceased operations 2023").
 - If you cannot confidently identify the company, leave fields null rather than guessing. Never fabricate.
 - When done, call return_profile.`;
 
@@ -43,6 +72,11 @@ const returnTool: Anthropic.Tool = {
       stage: { type: "string" },
       geography: { type: "string" },
       website: { type: "string" },
+      exitType: {
+        type: "string",
+        enum: ["ipo", "acquired", "shutdown", "private", "unknown"],
+      },
+      exitNote: { type: "string" },
     },
     required: [],
   },
@@ -63,6 +97,8 @@ export async function enrichCompany(
     stage: null,
     geography: null,
     website: website ?? null,
+    exitType: null,
+    exitNote: null,
   };
   if (!process.env.ANTHROPIC_API_KEY) return empty;
 
@@ -103,5 +139,85 @@ export async function enrichCompany(
     stage: str(input.stage),
     geography: str(input.geography),
     website: url && /^https?:\/\//.test(url) ? url : (website ?? null),
+    exitType: asExitType(input.exitType),
+    exitNote: str(input.exitNote),
   };
+}
+
+const EXIT_SYSTEM = `You check whether a specific company has had a corporate exit event, for a venture investor tracking a portfolio.
+
+Use web search (think recent news, press releases, SEC filings, Crunchbase). Determine whether the company has:
+- IPO'd / gone public → exitType "ipo"
+- been acquired or merged → exitType "acquired"
+- shut down / wound down / ceased operations → exitType "shutdown"
+- is clearly still operating independently and private → exitType "private"
+- can't be determined → exitType "unknown"
+
+Put a short detail in exitNote with the year and counterparty when known (e.g. "Acquired by Stripe (2023)", "IPO Nasdaq 2024", "Ceased operations 2023"). Base everything ONLY on what you find — never guess. Call return_exit when done.`;
+
+const exitTool: Anthropic.Tool = {
+  name: "return_exit",
+  description: "Return the company's exit status.",
+  input_schema: {
+    type: "object",
+    properties: {
+      exitType: {
+        type: "string",
+        enum: ["ipo", "acquired", "shutdown", "private", "unknown"],
+      },
+      exitNote: { type: "string" },
+    },
+    required: ["exitType"],
+  },
+};
+
+/**
+ * Lightweight exit-status check for a company we already have a description for
+ * (so we don't re-research the whole profile). Searches Google/news for IPO,
+ * acquisition, or shutdown. Degrades to unknown on any failure.
+ */
+export async function checkExit(
+  name: string,
+  website: string | null,
+  options?: { signal?: AbortSignal },
+): Promise<ExitInfo> {
+  const none: ExitInfo = { exitType: null, exitNote: null };
+  if (!process.env.ANTHROPIC_API_KEY) return none;
+
+  try {
+    const client = new Anthropic();
+    const stream = client.messages.stream(
+      {
+        model: MODEL,
+        max_tokens: 512,
+        system: EXIT_SYSTEM,
+        tools: [
+          { type: "web_search_20250305", name: "web_search", max_uses: 2 },
+          exitTool,
+        ],
+        messages: [
+          {
+            role: "user",
+            content: `Check the exit status of this company via return_exit.\n\nName: ${name}${
+              website ? `\nWebsite: ${website}` : ""
+            }`,
+          },
+        ],
+      },
+      { signal: options?.signal },
+    );
+    const message = await stream.finalMessage();
+    const toolUse = message.content.find(
+      (b): b is Anthropic.ToolUseBlock =>
+        b.type === "tool_use" && b.name === "return_exit",
+    );
+    if (!toolUse) return none;
+    const input = toolUse.input as Record<string, unknown>;
+    return {
+      exitType: asExitType(input.exitType),
+      exitNote: str(input.exitNote),
+    };
+  } catch {
+    return none;
+  }
 }

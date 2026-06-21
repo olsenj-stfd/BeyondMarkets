@@ -88,6 +88,8 @@ export async function POST(req: Request) {
         geography: str(obj.geography),
         website,
         profileSource: description.length >= 10 ? "manual" : "web",
+        exitType: null,
+        exitNote: null,
         score: null,
         scoredAt: null,
       };

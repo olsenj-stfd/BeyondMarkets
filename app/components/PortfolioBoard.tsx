@@ -42,6 +42,13 @@ const CLIMATE_LABEL: Record<RegClimate, string> = {
   headwind: "Headwind",
 };
 
+// Only the meaningful exit events get a badge (private/unknown stay quiet).
+const EXIT_LABEL: Record<string, string> = {
+  ipo: "IPO",
+  acquired: "Acquired",
+  shutdown: "Shut down",
+};
+
 function riskLabel(n: number): string {
   return n >= 67 ? "High" : n >= 34 ? "Medium" : "Low";
 }
@@ -299,12 +306,26 @@ export default function PortfolioBoard({
                     )}
                   </div>
                 </div>
-                {s && (
-                  <span className={`badge badge-${s.regClimate}`}>
-                    {CLIMATE_LABEL[s.regClimate]}
-                  </span>
-                )}
+                <div className="company-head-badges">
+                  {c.exitType && EXIT_LABEL[c.exitType] && (
+                    <span
+                      className={`badge badge-exit badge-exit-${c.exitType}`}
+                      title={c.exitNote ?? undefined}
+                    >
+                      {EXIT_LABEL[c.exitType]}
+                    </span>
+                  )}
+                  {s && (
+                    <span className={`badge badge-${s.regClimate}`}>
+                      {CLIMATE_LABEL[s.regClimate]}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {c.exitType && EXIT_LABEL[c.exitType] && c.exitNote && (
+                <p className="exit-note">{c.exitNote}</p>
+              )}
 
               {c.description && <p className="muted company-desc">{c.description}</p>}
 
