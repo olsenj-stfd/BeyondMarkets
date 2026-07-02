@@ -49,8 +49,25 @@ const EXIT_LABEL: Record<string, string> = {
   shutdown: "Shut down",
 };
 
-function riskLabel(n: number): string {
+type Band = "High" | "Medium" | "Low";
+
+function riskBand(n: number): Band {
   return n >= 67 ? "High" : n >= 34 ? "Medium" : "Low";
+}
+
+/**
+ * Non-dilutive reach — a transparent, deterministic read of how much grant
+ * capital is actually within reach, from the real matched grant programs:
+ *   High   = 3+ strongly-matched grants (relevance ≥ 60)
+ *   Medium = 1-2 strong grants, or 2+ matched grants overall
+ *   Low    = otherwise
+ */
+function reachBand(opps: ScoredOpportunity[]): Band {
+  const grants = opps.filter((o) => o.type === "grant_deadline");
+  const strong = grants.filter((o) => o.relevance >= 60);
+  if (strong.length >= 3) return "High";
+  if (strong.length >= 1 || grants.length >= 2) return "Medium";
+  return "Low";
 }
 
 function fmtDate(iso: string | null): string | null {
@@ -133,13 +150,9 @@ export default function PortfolioBoard({
   const isBusy = scoringId !== null;
 
   // ── Rollup ────────────────────────────────────────────────────────────
-  const avgNonDilutive =
-    scored.length > 0
-      ? Math.round(
-          scored.reduce((s, c) => s + (c.score?.nonDilutive ?? 0), 0) /
-            scored.length,
-        )
-      : 0;
+  const highReach = scored.filter(
+    (c) => reachBand(c.score?.opportunities ?? []) === "High",
+  );
   const climateCounts = scored.reduce(
     (acc, c) => {
       const k = c.score?.regClimate ?? "neutral";
@@ -211,12 +224,65 @@ export default function PortfolioBoard({
         </button>
       </section>
 
+      <details className="glass-card methodology">
+        <summary>How to read these scores</summary>
+        <div className="methodology-body">
+          <p>
+            <strong>Non-dilutive reach</strong> — how much grant capital is
+            actually within reach, computed from the real matched grant programs
+            (no black box):
+          </p>
+          <ul>
+            <li>
+              <b>High</b> — 3+ strongly-matched grants (relevance ≥ 60)
+            </li>
+            <li>
+              <b>Medium</b> — 1–2 strong grants, or 2+ matched grants overall
+            </li>
+            <li>
+              <b>Low</b> — no well-matched grant programs currently open
+            </li>
+          </ul>
+          <p>
+            <strong>Policy risk</strong> — how dependent the company&apos;s thesis
+            is on a subsidy or policy that could be repealed (a model
+            assessment). <b>High</b> ≥ 67, <b>Medium</b> 34–66, <b>Low</b> below
+            34.
+          </p>
+          <p>
+            <strong>Regulatory climate</strong> — the direction of regulatory
+            momentum for the company&apos;s sector (a model assessment):
+          </p>
+          <ul>
+            <li>
+              <b>Tailwind</b> — rules, standards, or mandates are creating demand
+              or funding for what they do.
+            </li>
+            <li>
+              <b>Neutral</b> — no strong regulatory push either way.
+            </li>
+            <li>
+              <b>Headwind</b> — rollbacks, permitting friction, or enforcement
+              risk are working against them.
+            </li>
+          </ul>
+          <p className="muted">
+            Grant programs and deadlines are real, dated records from official
+            sources. Policy risk and regulatory climate are Claude&apos;s
+            assessments — expand a company to see the reasoning and evidence.
+          </p>
+        </div>
+      </details>
+
       {scored.length > 0 && (
         <section className="rollup">
           <div className="glass-card stat">
-            <span className="stat-label">Avg non-dilutive reach</span>
-            <span className="stat-value">{avgNonDilutive}</span>
-            <span className="stat-sub">/ 100 across scored companies</span>
+            <span className="stat-label">High non-dilutive reach</span>
+            <span className="stat-value">{highReach.length}</span>
+            <span className="stat-sub">
+              {highReach.length === 1 ? "company" : "companies"} with strong grant
+              fit
+            </span>
           </div>
           <div className="glass-card stat">
             <span className="stat-label">Regulatory climate</span>
@@ -350,13 +416,22 @@ export default function PortfolioBoard({
 
                   <div className="score-row">
                     <div className="score-metric">
-                      <span className="score-num">{s.nonDilutive}</span>
+                      <span
+                        className={`score-band band-${reachBand(
+                          s.opportunities,
+                        ).toLowerCase()}`}
+                      >
+                        {reachBand(s.opportunities)}
+                      </span>
                       <span className="score-cap">Non-dilutive reach</span>
                     </div>
                     <div className="score-metric">
-                      <span className="score-num">
-                        {s.policyRisk}
-                        <small> {riskLabel(s.policyRisk)}</small>
+                      <span
+                        className={`score-band risk-${riskBand(
+                          s.policyRisk,
+                        ).toLowerCase()}`}
+                      >
+                        {riskBand(s.policyRisk)}
                       </span>
                       <span className="score-cap">Policy risk</span>
                     </div>

@@ -1553,6 +1553,78 @@ details.more[open] summary::before {
   font-style: italic;
 }
 
+/* Score bands (High / Medium / Low) shown instead of raw numbers */
+.score-band {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.band-high {
+  color: #15803d;
+}
+.band-medium {
+  color: #a16207;
+}
+.band-low {
+  color: var(--text-secondary);
+}
+
+/* Policy risk: high is bad (red), low is fine */
+.risk-high {
+  color: #b91c1c;
+}
+.risk-medium {
+  color: #a16207;
+}
+.risk-low {
+  color: #15803d;
+}
+
+/* Methodology / how-to-read explainer */
+.methodology {
+  margin-bottom: 20px;
+  padding: 18px 24px;
+}
+
+.methodology > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--text-primary);
+  list-style: none;
+}
+
+.methodology > summary::-webkit-details-marker {
+  display: none;
+}
+
+.methodology > summary::before {
+  content: "▸ ";
+  color: var(--text-secondary);
+}
+
+.methodology[open] > summary::before {
+  content: "▾ ";
+}
+
+.methodology-body {
+  margin-top: 14px;
+  font-size: 14px;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.methodology-body ul {
+  margin: 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
 .badge-exit-acquired,
 .badge-exit-ipo {
   background: rgba(99, 102, 241, 0.12);
