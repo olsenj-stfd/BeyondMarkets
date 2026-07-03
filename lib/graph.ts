@@ -9,8 +9,10 @@ import type { CompanyGraph, PortfolioCompany } from "@/lib/types";
  * guess here costs recall, never a fabricated fact shown to the user.
  */
 
-const MODEL = "claude-sonnet-4-6";
-const MAX_OUTPUT_TOKENS = 1200;
+// Haiku: graph drafting is easy derivation work, and it's on the critical
+// path of every first score — speed matters more than marginal depth here.
+const MODEL = "claude-haiku-4-5";
+const MAX_OUTPUT_TOKENS = 1000;
 const MAX_LIST = 8;
 const MAX_KEYWORDS = 20;
 
@@ -89,9 +91,9 @@ export async function draftGraph(
   const client = new Anthropic();
   const stream = client.messages.stream(
     {
+      // No effort/output_config: not supported on Haiku 4.5.
       model: MODEL,
       max_tokens: MAX_OUTPUT_TOKENS,
-      output_config: { effort: "low" },
       system: SYSTEM,
       tools: [graphTool],
       tool_choice: { type: "tool", name: "return_graph" },

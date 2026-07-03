@@ -25,7 +25,7 @@ import { expandTerms } from "@/lib/synonyms";
 
 const MODEL = "claude-sonnet-4-6";
 const SHORTLIST = 60;
-const MAX_EVIDENCE = 10;
+const MAX_EVIDENCE = 8;
 
 /** Fold the structured fields into one text blob for classification + prompt. */
 function companyText(c: PortfolioCompany): string {
@@ -154,7 +154,8 @@ const scoreTool: Anthropic.Tool = {
             },
             whyRelevant: {
               type: "string",
-              description: "One concrete, company-specific sentence.",
+              description:
+                "Optional extra context ONLY when the mechanism doesn't already say it — usually omit.",
             },
             position: {
               type: "string",
@@ -167,7 +168,7 @@ const scoreTool: Anthropic.Tool = {
                 "Set ONLY when eligibility likely excludes the company itself (e.g. 'nonprofit-only — for-profit ineligible; relevant via partners'). Never present gated grants as direct money.",
             },
           },
-          required: ["id", "relevance", "affectedNode", "mechanism", "direction", "whyRelevant"],
+          required: ["id", "relevance", "affectedNode", "mechanism", "direction"],
         },
       },
       definingEvent: {
@@ -294,7 +295,8 @@ Selection discipline:
 - When a grant's eligibility likely excludes the company (nonprofit-only, government-only), set entityGate and do not count it in nonDilutive; select it anyway if it moves the ecosystem.
 - The "summary" must be informative on its own — what IS and ISN'T happening and what it means — never a verdict about the shortlist ("weak fit with the shortlist" is banned). If little matched, say plainly that the tracked federal/state feeds show little touching this company right now.
 - regimeShift: look across enforcement + intermediary items for structural change no single docket shows.
-- Be calibrated and specific to THIS company; generic sector talk is a defect.`;
+- Be calibrated and specific to THIS company; generic sector talk is a defect.
+- BREVITY: every text field is ONE tight sentence (definingEvent.analysis may be 2-3). Omit whyRelevant unless it adds something the mechanism doesn't. This runs under a hard time cap — long prose causes timeouts.`;
 
 export async function scoreCompany(
   company: PortfolioCompany,
@@ -322,7 +324,7 @@ export async function scoreCompany(
   const stream = client.messages.stream(
     {
       model: MODEL,
-      max_tokens: 2500,
+      max_tokens: 2000,
       output_config: { effort: "low" },
       system: SYSTEM,
       tools: [scoreTool],
@@ -353,7 +355,7 @@ export async function scoreCompany(
     affectedNode?: string;
     mechanism?: string;
     direction?: string;
-    whyRelevant: string;
+    whyRelevant?: string;
     position?: string;
     entityGate?: string;
   }
@@ -400,7 +402,7 @@ export async function scoreCompany(
         deadline: o.deadline ?? o.effectiveDate ?? o.expirationDate,
         url: o.url,
         relevance: clamp(s.relevance),
-        whyRelevant: s.whyRelevant,
+        whyRelevant: s.whyRelevant?.trim() || s.mechanism?.trim() || "",
         affectedNode: s.affectedNode?.trim() || null,
         mechanism: s.mechanism?.trim() || null,
         direction: s.direction ? asDirection(s.direction) : null,

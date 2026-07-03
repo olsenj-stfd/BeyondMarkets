@@ -100,15 +100,16 @@ export async function POST(
     }
 
     // Draft the regulatory graph once (persisted with the company; reused on
-    // re-scores). Matching runs against the whole graph, not the description.
-    if (!working.graph) {
-      working = {
-        ...working,
-        graph: await draftGraph(working, { signal: ac.signal }),
-      };
-    }
+    // re-scores). Runs in parallel with the events fetch — both are on the
+    // critical path of every first score.
+    const [graph, opportunities] = await Promise.all([
+      working.graph
+        ? Promise.resolve(working.graph)
+        : draftGraph(working, { signal: ac.signal }),
+      getRelevantEvents(),
+    ]);
+    working = { ...working, graph };
 
-    const opportunities = await getRelevantEvents();
     const score = await scoreCompany(working, opportunities, {
       signal: ac.signal,
     });
