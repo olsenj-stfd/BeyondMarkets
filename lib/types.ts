@@ -193,6 +193,8 @@ export interface Consideration {
 
 export type RegClimate = "tailwind" | "neutral" | "headwind";
 
+export type FlowDirection = "tailwind" | "headwind" | "both";
+
 /** A real, dated opportunity selected as evidence behind a company's score. */
 export interface ScoredOpportunity {
   id: string;
@@ -204,6 +206,25 @@ export interface ScoredOpportunity {
   url: string;
   relevance: number; // 0-100
   whyRelevant: string;
+  /** Which value-chain node this hits (company, customers, partners, substitutes…). */
+  affectedNode?: string | null;
+  /** How it changes the money, the rules, or the enforcement risk for that node. */
+  mechanism?: string | null;
+  direction?: FlowDirection | null;
+  /** Open rulemakings: the position the company could credibly take. */
+  position?: string | null;
+  /** Set when eligibility gates the company out (e.g. nonprofit-only). */
+  entityGate?: string | null;
+}
+
+/** A named policy dependency tied to a tracked event where possible. */
+export interface DependencyDetail {
+  name: string;
+  /** Shortlist event id, or a statute/docket/bill reference string. */
+  eventRef: string | null;
+  direction: FlowDirection;
+  /** Resolved from the referenced event's real dates — never model-invented. */
+  date: string | null;
 }
 
 export interface CompanyScore {
@@ -221,6 +242,23 @@ export interface CompanyScore {
   summary: string;
   /** Real, dated programs/rules grounding the scores (deadlines + links). */
   opportunities: ScoredOpportunity[];
+  /**
+   * The one development that most reshapes this company's market — pending-
+   * effective final rules and enacted laws count, not just open dockets.
+   * eventId cites a tracked record; null means the model flagged something
+   * our feeds don't carry yet (a coverage gap, stated as such).
+   */
+  definingEvent?: { title: string; analysis: string; eventId: string | null } | null;
+  /** Money flowing to customers/partners/substitutes, with both-ways analysis. */
+  ecosystemFunding?: { direction: FlowDirection; analysis: string } | null;
+  /** Controlling consent orders/settlements from tracked enforcement records. */
+  enforcementPrecedent?: string | null;
+  /** Structural change signal (e.g. federal enforcement retreating to states). */
+  regimeShift?: { fired: boolean; rationale: string } | null;
+  /** The single highest-signal upcoming date/window, stated concretely. */
+  watchItem?: { what: string; date: string | null; eventId: string | null } | null;
+  /** Dependencies tied to tracked events (richer than the flat names above). */
+  dependencyDetails?: DependencyDetail[];
 }
 
 /**

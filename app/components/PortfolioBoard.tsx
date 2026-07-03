@@ -74,19 +74,73 @@ function dependencyBand(dependencies: string[]): Band {
 }
 
 /**
- * Non-dilutive reach — a transparent, deterministic read of how much grant
- * capital is actually within reach, from the real matched grant programs:
- *   High   = 3+ strongly-matched grants (relevance ≥ 60)
- *   Medium = 1-2 strong grants, or 2+ matched grants overall
+ * Direct grant reach — a transparent, deterministic read of how much grant
+ * capital THIS company could win itself, from the real matched grant
+ * programs. Entity-gated grants (e.g. nonprofit-only) don't count:
+ *   High   = 3+ strongly-matched eligible grants (relevance ≥ 60)
+ *   Medium = 1-2 strong eligible grants, or 2+ eligible grants overall
  *   Low    = otherwise
  */
 function reachBand(opps: ScoredOpportunity[]): Band {
-  const grants = opps.filter((o) => o.type === "grant_deadline");
+  const grants = opps.filter(
+    (o) =>
+      (o.type === "grant_deadline" ||
+        o.eventType === "grant_open" ||
+        o.eventType === "grant_forecasted") &&
+      !o.entityGate,
+  );
   const strong = grants.filter((o) => o.relevance >= 60);
   if (strong.length >= 3) return "High";
   if (strong.length >= 1 || grants.length >= 2) return "Medium";
   return "Low";
 }
+
+const DIRECTION_ICON: Record<string, string> = {
+  tailwind: "↑ tailwind",
+  headwind: "↓ headwind",
+  both: "↕ cuts both ways",
+};
+
+/** Group evidence into the insight-card sections by event type. */
+function evidenceGroup(o: ScoredOpportunity): "grants" | "rulemakings" | "enforcement" | "signals" {
+  const et = o.eventType;
+  if (
+    o.type === "grant_deadline" ||
+    et === "grant_open" ||
+    et === "grant_forecasted" ||
+    et === "grant_recurring" ||
+    et === "foundation_grant" ||
+    et === "appropriations_event"
+  ) {
+    return "grants";
+  }
+  if (et === "enforcement_action") return "enforcement";
+  if (
+    o.type === "comment_period" ||
+    et === "nprm_open_comment" ||
+    et === "rule_final_pending_effective" ||
+    et === "rule_effective_recent" ||
+    et === "rule_temporary_expiring" ||
+    et === "guidance_document" ||
+    et === "negotiated_rulemaking" ||
+    et === "unified_agenda_planned" ||
+    et === "state_implementation_window" ||
+    et === "bill_introduced" ||
+    et === "bill_committee_passed" ||
+    et === "bill_chamber_passed" ||
+    et === "law_enacted_implementing"
+  ) {
+    return "rulemakings";
+  }
+  return "signals";
+}
+
+const GROUP_LABEL: Record<ReturnType<typeof evidenceGroup>, string> = {
+  grants: "Funding flows",
+  rulemakings: "Rulemakings, bills & implementation windows",
+  enforcement: "Enforcement precedent",
+  signals: "Market & analyst signals",
+};
 
 function fmtDate(iso: string | null): string | null {
   if (!iso) return null;
@@ -253,13 +307,15 @@ export default function PortfolioBoard({
         <summary>How to read these scores</summary>
         <div className="methodology-body">
           <p>
-            <strong>Non-dilutive reach</strong> — how much grant capital is
-            actually within reach, computed from the real matched grant programs
-            (no black box):
+            <strong>Direct grant reach</strong> — how much grant capital this
+            company could win itself, computed from the real matched grant
+            programs (no black box). Grants gated by entity type (e.g.
+            nonprofit-only) don&apos;t count here — they show under ecosystem
+            funding instead:
           </p>
           <ul>
             <li>
-              <b>High</b> — 3+ strongly-matched grants (relevance ≥ 60)
+              <b>High</b> — 3+ strongly-matched eligible grants (relevance ≥ 60)
             </li>
             <li>
               <b>Medium</b> — 1–2 strong grants, or 2+ matched grants overall
@@ -304,11 +360,28 @@ export default function PortfolioBoard({
               risk are working against them.
             </li>
           </ul>
+          <p>
+            <strong>Defining event &amp; watch item</strong> — the one
+            development that most reshapes the company&apos;s market (pending-
+            effective final rules and enacted laws count, not just open
+            dockets), and the single highest-signal upcoming date to monitor.
+            Both cite tracked records; when something isn&apos;t in the feeds
+            yet it&apos;s labeled as a coverage gap.
+          </p>
+          <p>
+            <strong>Ecosystem funding</strong> — money flowing to the
+            company&apos;s customers, partners, or substitutes, with direction:
+            a subsidy to a substitute can be a headwind and a product opening
+            at once.
+          </p>
           <p className="muted">
-            Grant programs and deadlines are real, dated records from official
-            sources. The named dependencies and regulatory climate come from
-            Claude&apos;s research — open a company&apos;s program analysis to
-            see the reasoning and sources.
+            Events, dates, and links are real records from tracked sources
+            (Grants.gov, Federal Register, Regulations.gov, Congress.gov, CA
+            Grants Portal, agency newsrooms, state regulators). The analysis
+            connecting them to this company comes from Claude&apos;s research —
+            open a company&apos;s program analysis to see the affected node and
+            mechanism behind every item. Enforcement precedent is cited only
+            from tracked enforcement records, never from model memory.
           </p>
         </div>
       </details>
@@ -457,6 +530,55 @@ export default function PortfolioBoard({
                 <>
                   {s.summary && <p className="why">{s.summary}</p>}
 
+                  {s.definingEvent && (
+                    <div className="defining-event">
+                      <span className="defining-label">Defining event</span>
+                      <p className="defining-title">
+                        {s.definingEvent.eventId &&
+                        s.opportunities.find(
+                          (o) => o.id === s.definingEvent!.eventId,
+                        ) ? (
+                          <a
+                            href={
+                              s.opportunities.find(
+                                (o) => o.id === s.definingEvent!.eventId,
+                              )!.url
+                            }
+                            target="_blank"
+                            rel="noopener noreferrer"
+                          >
+                            {s.definingEvent.title} ↗
+                          </a>
+                        ) : (
+                          s.definingEvent.title
+                        )}
+                      </p>
+                      <p className="defining-analysis">
+                        {s.definingEvent.analysis}
+                        {!s.definingEvent.eventId && (
+                          <span className="muted">
+                            {" "}
+                            (Not yet in the tracked feeds — flagged from
+                            analysis, verify at the source.)
+                          </span>
+                        )}
+                      </p>
+                    </div>
+                  )}
+
+                  {s.watchItem && (
+                    <p className="watch-item">
+                      <strong>Watch:</strong> {s.watchItem.what}
+                      {s.watchItem.date && ` — ${fmtDate(s.watchItem.date)}`}
+                    </p>
+                  )}
+
+                  {s.regimeShift?.fired && (
+                    <p className="regime-shift">
+                      <strong>Regime shift:</strong> {s.regimeShift.rationale}
+                    </p>
+                  )}
+
                   <div className="score-row">
                     <div className="score-metric">
                       <span
@@ -466,8 +588,16 @@ export default function PortfolioBoard({
                       >
                         {reachBand(s.opportunities)}
                       </span>
-                      <span className="score-cap">Non-dilutive reach</span>
+                      <span className="score-cap">Direct grant reach</span>
                     </div>
+                    {s.ecosystemFunding && (
+                      <div className="score-metric">
+                        <span className="score-band">
+                          {DIRECTION_ICON[s.ecosystemFunding.direction]}
+                        </span>
+                        <span className="score-cap">Ecosystem funding</span>
+                      </div>
+                    )}
                     <div className="score-metric">
                       <span
                         className={`score-band risk-${dependencyBand(
@@ -482,21 +612,21 @@ export default function PortfolioBoard({
                       <span className="score-num">
                         {
                           s.opportunities.filter(
-                            (o) => o.type === "grant_deadline",
+                            (o) => evidenceGroup(o) === "grants",
                           ).length
                         }
                       </span>
-                      <span className="score-cap">Open grants</span>
+                      <span className="score-cap">Funding items</span>
                     </div>
                     <div className="score-metric">
                       <span className="score-num">
                         {
                           s.opportunities.filter(
-                            (o) => o.type === "comment_period",
+                            (o) => evidenceGroup(o) === "rulemakings",
                           ).length
                         }
                       </span>
-                      <span className="score-cap">Open rulemakings</span>
+                      <span className="score-cap">Rules &amp; bills</span>
                     </div>
                   </div>
 
@@ -580,66 +710,104 @@ export default function PortfolioBoard({
                           <strong>Regulatory climate:</strong> {s.regRationale}
                         </p>
                       )}
+                      {s.ecosystemFunding && (
+                        <p className="evidence-line">
+                          <strong>Ecosystem funding:</strong>{" "}
+                          {s.ecosystemFunding.analysis}
+                        </p>
+                      )}
                       {s.policyRationale && (
                         <p className="evidence-line">
                           <strong>Policy dependency:</strong> {s.policyRationale}
                         </p>
                       )}
-                      {s.dependencies.length > 0 && (
+                      {(s.dependencyDetails?.length ?? 0) > 0 ? (
                         <p className="evidence-line">
                           <strong>Dependencies:</strong>{" "}
-                          {s.dependencies.join(", ")}
+                          {s.dependencyDetails!
+                            .map(
+                              (d) =>
+                                `${d.name} (${d.direction}${
+                                  d.date ? `, ${fmtDate(d.date)}` : ""
+                                })`,
+                            )
+                            .join(" · ")}
                         </p>
+                      ) : (
+                        s.dependencies.length > 0 && (
+                          <p className="evidence-line">
+                            <strong>Dependencies:</strong>{" "}
+                            {s.dependencies.join(", ")}
+                          </p>
+                        )
                       )}
-                      {(["grant_deadline", "comment_period"] as const).map(
-                        (kind) => {
-                          const items = s.opportunities.filter(
-                            (o) => o.type === kind,
-                          );
-                          if (items.length === 0) return null;
-                          return (
-                            <div key={kind}>
-                              <p className="evidence-line">
-                                <strong>
-                                  {kind === "grant_deadline"
-                                    ? "Open grants"
-                                    : "Rulemakings open for comment"}
-                                </strong>
-                              </p>
-                              <ul className="evidence-opps">
-                                {items.map((o) => (
-                                  <li key={o.id}>
-                                    <a
-                                      href={o.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                    >
-                                      {o.title}
-                                    </a>
-                                    <span className="act-meta">
-                                      {fmtDate(o.deadline)
-                                        ? `Due ${fmtDate(o.deadline)}`
-                                        : ""}
-                                      {o.agency ? ` · ${o.agency}` : ""}
+                      {(
+                        ["grants", "rulemakings", "enforcement", "signals"] as const
+                      ).map((group) => {
+                        const items = s.opportunities.filter(
+                          (o) => evidenceGroup(o) === group,
+                        );
+                        if (items.length === 0) return null;
+                        return (
+                          <div key={group}>
+                            <p className="evidence-line">
+                              <strong>{GROUP_LABEL[group]}</strong>
+                            </p>
+                            {group === "enforcement" &&
+                              s.enforcementPrecedent && (
+                                <p className="evidence-line">
+                                  {s.enforcementPrecedent}
+                                </p>
+                              )}
+                            <ul className="evidence-opps">
+                              {items.map((o) => (
+                                <li key={o.id}>
+                                  <a
+                                    href={o.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    {o.title}
+                                  </a>
+                                  <span className="act-meta">
+                                    {fmtDate(o.deadline)
+                                      ? `Key date ${fmtDate(o.deadline)}`
+                                      : ""}
+                                    {o.agency ? ` · ${o.agency}` : ""}
+                                    {o.direction
+                                      ? ` · ${DIRECTION_ICON[o.direction]}`
+                                      : ""}
+                                  </span>
+                                  {o.entityGate && (
+                                    <span className="entity-gate">
+                                      Eligibility gate: {o.entityGate}
                                     </span>
+                                  )}
+                                  <span className="evidence-why">
+                                    {o.affectedNode && (
+                                      <strong>{o.affectedNode}: </strong>
+                                    )}
+                                    {o.mechanism ?? o.whyRelevant}
+                                  </span>
+                                  {o.position && (
                                     <span className="evidence-why">
-                                      {o.whyRelevant}
+                                      <em>Position to take:</em> {o.position}
                                     </span>
-                                  </li>
-                                ))}
-                              </ul>
-                            </div>
-                          );
-                        },
-                      )}
+                                  )}
+                                </li>
+                              ))}
+                            </ul>
+                          </div>
+                        );
+                      })}
                       {s.opportunities.length === 0 && (
                         <p className="muted">
-                          No currently-open grants or comment periods in our
-                          federal + California feeds matched this company. That
-                          reflects what&apos;s open right now in the sources we
-                          track (Grants.gov, CA Grants Portal, Federal Register,
-                          Regulations.gov) — not necessarily that no programs
-                          exist. New opportunities are ingested daily; re-score
+                          Nothing in the tracked feeds matched this company
+                          right now — grants, pending rules, bills, or
+                          enforcement. That reflects current feed coverage
+                          (Grants.gov, CA Grants Portal, Federal Register,
+                          Regulations.gov, Congress.gov, agency newsrooms), not
+                          necessarily the company. Feeds ingest daily; re-score
                           to refresh.
                         </p>
                       )}

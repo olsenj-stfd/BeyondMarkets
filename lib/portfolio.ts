@@ -1,6 +1,8 @@
 import Anthropic from "@anthropic-ai/sdk";
 import type {
   CompanyScore,
+  DependencyDetail,
+  FlowDirection,
   Opportunity,
   PortfolioCompany,
   RegClimate,
@@ -124,30 +126,79 @@ function prefilter(company: PortfolioCompany, events: Opportunity[]): Opportunit
 const scoreTool: Anthropic.Tool = {
   name: "score_company",
   description:
-    "Return the portfolio-company assessment: selected real opportunities plus the non-dilutive, regulatory-climate, and policy-risk scores.",
+    "Return the portfolio-company regulatory assessment: selected real events with node/mechanism analysis, the defining event, funding flows, enforcement precedent, and the watch item.",
   input_schema: {
     type: "object",
     properties: {
       selected: {
         type: "array",
-        description: `Up to ${MAX_EVIDENCE} opportunities from the shortlist that genuinely apply, most relevant first. Only use provided ids.`,
+        description: `Up to ${MAX_EVIDENCE} events from the shortlist that genuinely apply, most relevant first. Only use provided ids. An item qualifies ONLY if you can name the affected value-chain node and the mechanism — discard surface-keyword matches.`,
         items: {
           type: "object",
           properties: {
             id: { type: "string" },
             relevance: { type: "number", description: "0-100." },
+            affectedNode: {
+              type: "string",
+              description:
+                "Which value-chain node this hits: the company itself, its customers, partners, substitutes, or upstream payers — name the specific node.",
+            },
+            mechanism: {
+              type: "string",
+              description:
+                "How it changes the money, the rules, or the enforcement risk for that node. One concrete sentence.",
+            },
+            direction: {
+              type: "string",
+              enum: ["tailwind", "headwind", "both"],
+            },
             whyRelevant: {
               type: "string",
               description: "One concrete, company-specific sentence.",
             },
+            position: {
+              type: "string",
+              description:
+                "Open rulemakings/bills only: the concrete position this company could credibly take.",
+            },
+            entityGate: {
+              type: "string",
+              description:
+                "Set ONLY when eligibility likely excludes the company itself (e.g. 'nonprofit-only — for-profit ineligible; relevant via partners'). Never present gated grants as direct money.",
+            },
           },
-          required: ["id", "relevance", "whyRelevant"],
+          required: ["id", "relevance", "affectedNode", "mechanism", "direction", "whyRelevant"],
         },
+      },
+      definingEvent: {
+        type: "object",
+        description:
+          "The ONE development that most reshapes this company's market — a pending-effective final rule or enacted law counts as much as an open docket. eventId must be a shortlist id; use null ONLY if the defining event is not in the shortlist, and then say so explicitly in the analysis (it is a feed-coverage gap, not a fact you may cite).",
+        properties: {
+          eventId: { type: ["string", "null"] },
+          title: { type: "string" },
+          analysis: {
+            type: "string",
+            description:
+              "2-4 sentences: what changes, when, and the both-ways effects on this company's market.",
+          },
+        },
+        required: ["title", "analysis"],
       },
       nonDilutive: {
         type: "number",
         description:
-          "0-100: how much accessible non-dilutive capital / program fit is within reach, informed by the breadth and fit of the selected grant opportunities.",
+          "0-100: direct grant reach — money THIS company could win itself. Entity-gated grants do not count toward this.",
+      },
+      ecosystemDirection: {
+        type: "string",
+        enum: ["tailwind", "headwind", "both"],
+        description: "Net direction of money flowing to customers/partners/substitutes.",
+      },
+      ecosystemAnalysis: {
+        type: "string",
+        description:
+          "1-3 sentences on ecosystem funding flows, with both-ways effects made explicit (e.g. 'subsidizes accredited substitutes, leaving non-accredited partners private-financing-only — a gap-financing opening above the award').",
       },
       regClimate: {
         type: "string",
@@ -161,17 +212,54 @@ const scoreTool: Anthropic.Tool = {
       policyRisk: {
         type: "number",
         description:
-          "0-100: how dependent the thesis is on a policy/subsidy that could change (higher = riskier).",
+          "0-100: how dependent the thesis is on a policy/subsidy that could change (higher = more dependent).",
       },
       policyRationale: {
         type: "string",
-        description: "One sentence on the main policy dependency or risk.",
+        description: "One sentence on the main policy dependency.",
       },
       dependencies: {
         type: "array",
-        items: { type: "string" },
         description:
-          "Named policy/subsidy dependencies to watch, e.g. 'IRA 45X credit', 'LCFS', 'ITC'.",
+          "Named policy/subsidy dependencies tied to tracked events where possible.",
+        items: {
+          type: "object",
+          properties: {
+            name: { type: "string", description: "e.g. 'HEA Title IV', 'IRA 45X'." },
+            eventRef: {
+              type: ["string", "null"],
+              description:
+                "Shortlist event id when one tracks this dependency; else a statute/docket/bill reference string; else null.",
+            },
+            direction: { type: "string", enum: ["tailwind", "headwind", "both"] },
+          },
+          required: ["name", "direction"],
+        },
+      },
+      enforcementPrecedent: {
+        type: ["string", "null"],
+        description:
+          "Controlling enforcement precedent for this business model, drawn ONLY from enforcement_action items in the shortlist (cite their titles). If the shortlist has none, return null — never recall precedent from memory.",
+      },
+      regimeShift: {
+        type: "object",
+        description:
+          "Structural-change signal: fire when enforcement + intermediary items in the shortlist indicate a regime shift (e.g. federal enforcement retreating, state AGs filling the void) even with no single docket open.",
+        properties: {
+          fired: { type: "boolean" },
+          rationale: { type: "string" },
+        },
+        required: ["fired"],
+      },
+      watchItem: {
+        type: "object",
+        description:
+          "The single highest-signal upcoming date/window for this company, stated concretely. eventId must be a shortlist id when the item is tracked (its real date is attached server-side); otherwise null.",
+        properties: {
+          eventId: { type: ["string", "null"] },
+          what: { type: "string" },
+        },
+        required: ["what"],
       },
       summary: {
         type: "string",
@@ -180,28 +268,33 @@ const scoreTool: Anthropic.Tool = {
     },
     required: [
       "selected",
+      "definingEvent",
       "nonDilutive",
       "regClimate",
       "policyRisk",
       "summary",
+      "watchItem",
     ],
   },
 };
 
-const SYSTEM = `You assess a single portfolio company for a mission-driven VC. You are given the company profile and a shortlist of REAL, dated opportunities (federal/California grant deadlines and open regulatory comment periods).
+const SYSTEM = `You assess a single portfolio company for a mission-driven VC's regulatory scanner. You get (a) the company profile INCLUDING its value-chain graph (customers, partners, substitutes, upstream payers, regimes) and (b) a shortlist of REAL tracked events: grants (open + forecasted), open comment periods, final rules pending or recently effective, moving bills, enforcement actions, guidance, and analyst signals — each with its real dates.
 
-Score it on:
-- nonDilutive (0-100): how much accessible non-dilutive capital / program fit is within reach, judged from the breadth and fit of the selected GRANT opportunities. Few or weak fits → low.
-- regClimate (tailwind/neutral/headwind): is regulatory momentum helping or hurting this sector right now?
-- policyRisk (0-100): how much does the thesis depend on a specific subsidy/policy that could be repealed? Name the dependencies.
+Produce the five-part insight:
+1. definingEvent — the one development that most reshapes this company's market. A final rule with a future effective date or an enacted law in implementation usually outranks an open comment period. Analyze effects that cut both ways.
+2. Funding flows — nonDilutive (0-100) counts ONLY money the company itself could win (respect entity gates); ecosystemDirection/ecosystemAnalysis cover money flowing to customers, partners, and substitutes — flag when a subsidy to substitutes is simultaneously a headwind and a product opening.
+3. Rulemakings & positions — for open comment periods and moving bills you select, give the concrete position the company could credibly take.
+4. enforcementPrecedent — only from enforcement_action items actually in the shortlist. None there → null. Never from memory.
+5. watchItem — the single most important upcoming dated thing to monitor.
 
-Rules:
-- Only select opportunities from the provided shortlist; never invent opportunities, ids, or dates.
-- Select BOTH kinds when relevant: grant deadlines (funding) AND open comment periods (rulemakings the company should weigh in on to shape rules that affect it). A relevant rulemaking is worth selecting even when no grant fits.
-- The "summary" must be informative on its own, never a verdict about the shortlist. Do NOT write things like "weak fit with the available shortlist". Instead say what IS and ISN'T there and what it means, e.g. "No open federal/CA grants currently target X; the closest is Y. Two EPA rulemakings on Z are open for comment and would affect their permitting." If nothing matched, say plainly that no currently-open programs in the federal/California feeds match this company's work — which reflects what is open right now, not the company's quality.
-- The qualitative scores are your assessment — be calibrated and specific, not generic.
-- "whyRelevant", rationales, and dependencies must be concrete and specific to THIS company. For comment periods, "whyRelevant" should say what the company would want the rule to say.
-- Do not restate or alter dates; the user sees real deadlines from the source records.`;
+Selection discipline:
+- Only use shortlist ids; never invent events, ids, or dates. Dates shown to the user come from the source records.
+- Select an item ONLY if you can name the affected value-chain node AND the mechanism (does it change the money, the rules, or the enforcement risk?). A keyword overlap with no nameable node+mechanism is a discard — e.g. a generic SEC reporting rule does not affect a training-finance company's value chain.
+- Money to the company's PARTNERS or CUSTOMERS or a rule governing its SUBSTITUTES is in scope — that is the point of the graph.
+- When a grant's eligibility likely excludes the company (nonprofit-only, government-only), set entityGate and do not count it in nonDilutive; select it anyway if it moves the ecosystem.
+- The "summary" must be informative on its own — what IS and ISN'T happening and what it means — never a verdict about the shortlist ("weak fit with the shortlist" is banned). If little matched, say plainly that the tracked federal/state feeds show little touching this company right now.
+- regimeShift: look across enforcement + intermediary items for structural change no single docket shows.
+- Be calibrated and specific to THIS company; generic sector talk is a defect.`;
 
 export async function scoreCompany(
   company: PortfolioCompany,
@@ -229,7 +322,7 @@ export async function scoreCompany(
   const stream = client.messages.stream(
     {
       model: MODEL,
-      max_tokens: 1500,
+      max_tokens: 2500,
       output_config: { effort: "low" },
       system: SYSTEM,
       tools: [scoreTool],
@@ -254,18 +347,44 @@ export async function scoreCompany(
     throw new Error("Scoring returned no structured output.");
   }
 
+  interface SelectedIn {
+    id: string;
+    relevance: number;
+    affectedNode?: string;
+    mechanism?: string;
+    direction?: string;
+    whyRelevant: string;
+    position?: string;
+    entityGate?: string;
+  }
+  interface DependencyIn {
+    name: string;
+    eventRef?: string | null;
+    direction?: string;
+  }
   const input = toolUse.input as {
-    selected?: { id: string; relevance: number; whyRelevant: string }[];
+    selected?: SelectedIn[];
+    definingEvent?: { eventId?: string | null; title?: string; analysis?: string };
     nonDilutive?: number;
+    ecosystemDirection?: string;
+    ecosystemAnalysis?: string;
     regClimate?: string;
     regRationale?: string;
     policyRisk?: number;
     policyRationale?: string;
-    dependencies?: string[];
+    dependencies?: DependencyIn[];
+    enforcementPrecedent?: string | null;
+    regimeShift?: { fired?: boolean; rationale?: string };
+    watchItem?: { eventId?: string | null; what?: string };
     summary?: string;
   };
 
-  // Resolve selected ids back to real records so deadlines + links are sourced.
+  const asDirection = (v: unknown): FlowDirection =>
+    v === "tailwind" || v === "headwind" || v === "both"
+      ? v
+      : "both";
+
+  // Resolve selected ids back to real records so dates + links are sourced.
   const byId = new Map(shortlist.map((o) => [o.id, o]));
   const opportunitiesOut: ScoredOpportunity[] = (input.selected ?? [])
     .filter((s) => byId.has(s.id))
@@ -278,10 +397,15 @@ export async function scoreCompany(
         type: o.type,
         eventType: o.eventType,
         agency: o.agency,
-        deadline: o.deadline,
+        deadline: o.deadline ?? o.effectiveDate ?? o.expirationDate,
         url: o.url,
         relevance: clamp(s.relevance),
         whyRelevant: s.whyRelevant,
+        affectedNode: s.affectedNode?.trim() || null,
+        mechanism: s.mechanism?.trim() || null,
+        direction: s.direction ? asDirection(s.direction) : null,
+        position: s.position?.trim() || null,
+        entityGate: s.entityGate?.trim() || null,
       };
     })
     .sort((a, b) => (a.deadline ?? "9999").localeCompare(b.deadline ?? "9999"));
@@ -291,18 +415,70 @@ export async function scoreCompany(
       ? input.regClimate
       : "neutral";
 
+  // Key dates for referenced events come from the records, never the model.
+  const eventDate = (id: string | null | undefined): string | null => {
+    if (!id) return null;
+    const o = byId.get(id);
+    return o ? (o.deadline ?? o.effectiveDate ?? o.expirationDate ?? o.openDate) : null;
+  };
+  const validEventId = (id: string | null | undefined): string | null =>
+    id && byId.has(id) ? id : null;
+
+  const dependencyDetails: DependencyDetail[] = (input.dependencies ?? [])
+    .filter((d) => typeof d?.name === "string" && d.name.trim())
+    .slice(0, 6)
+    .map((d) => {
+      const ref = typeof d.eventRef === "string" && d.eventRef.trim() ? d.eventRef.trim() : null;
+      return {
+        name: d.name.trim(),
+        eventRef: ref,
+        direction: asDirection(d.direction),
+        date: eventDate(ref),
+      };
+    });
+
+  const definingEvent =
+    input.definingEvent?.title && input.definingEvent.analysis
+      ? {
+          title: input.definingEvent.title.trim(),
+          analysis: input.definingEvent.analysis.trim(),
+          eventId: validEventId(input.definingEvent.eventId),
+        }
+      : null;
+
+  const watchItem = input.watchItem?.what
+    ? {
+        what: input.watchItem.what.trim(),
+        eventId: validEventId(input.watchItem.eventId),
+        date: eventDate(validEventId(input.watchItem.eventId)),
+      }
+    : null;
+
   return {
     nonDilutive: clamp(input.nonDilutive ?? 0),
     regClimate,
     regRationale: input.regRationale?.trim() ?? "",
     policyRisk: clamp(input.policyRisk ?? 0),
     policyRationale: input.policyRationale?.trim() ?? "",
-    dependencies: (input.dependencies ?? [])
-      .filter((d) => typeof d === "string" && d.trim())
-      .map((d) => d.trim())
-      .slice(0, 6),
+    dependencies: dependencyDetails.map((d) => d.name),
     summary: input.summary?.trim() ?? "",
     opportunities: opportunitiesOut,
+    definingEvent,
+    ecosystemFunding: input.ecosystemAnalysis?.trim()
+      ? {
+          direction: asDirection(input.ecosystemDirection),
+          analysis: input.ecosystemAnalysis.trim(),
+        }
+      : null,
+    enforcementPrecedent:
+      typeof input.enforcementPrecedent === "string" && input.enforcementPrecedent.trim()
+        ? input.enforcementPrecedent.trim()
+        : null,
+    regimeShift: input.regimeShift?.fired
+      ? { fired: true, rationale: input.regimeShift.rationale?.trim() ?? "" }
+      : null,
+    watchItem,
+    dependencyDetails,
   };
 }
 

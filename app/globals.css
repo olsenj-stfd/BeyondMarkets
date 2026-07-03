@@ -1467,6 +1467,64 @@ details.more[open] summary::before {
   line-height: 1.5;
 }
 
+.defining-event {
+  margin-top: 14px;
+  padding: 14px 16px;
+  border-radius: var(--radius-md);
+  background: var(--bg-solid);
+  border: 1px solid var(--border-soft);
+}
+
+.defining-label {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-secondary);
+}
+
+.defining-title {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 6px 0 4px;
+}
+
+.defining-title a {
+  color: var(--text-primary);
+  text-decoration: none;
+  border-bottom: 1px solid var(--line);
+}
+
+.defining-analysis {
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.watch-item {
+  margin-top: 12px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(231, 246, 94, 0.25);
+  border: 1px solid var(--accent-yellow);
+  font-size: 14px;
+}
+
+.regime-shift {
+  margin-top: 10px;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: rgba(249, 161, 108, 0.18);
+  border: 1px solid var(--accent-orange);
+  font-size: 14px;
+}
+
+.entity-gate {
+  display: block;
+  font-size: 12px;
+  font-weight: 600;
+  color: #a16207;
+}
+
 .graph-block {
   border: 1px dashed var(--line);
   border-radius: var(--radius-md);
