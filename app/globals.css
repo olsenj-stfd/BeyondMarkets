@@ -1359,6 +1359,16 @@ details.more[open] summary::before {
   font-weight: 500;
 }
 
+.act-portfolio {
+  color: var(--text-secondary);
+  text-decoration: none;
+  font-weight: 400;
+}
+
+.act-portfolio:hover {
+  color: var(--text-primary);
+}
+
 /* Regulatory-climate breakdown (rollup stat) */
 .climate-breakdown {
   display: flex;
@@ -1398,6 +1408,13 @@ details.more[open] summary::before {
 
 .dot-headwind {
   background: #ef4444;
+}
+
+.company-sort {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0 0 14px;
 }
 
 /* Company cards */

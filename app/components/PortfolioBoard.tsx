@@ -160,6 +160,7 @@ export default function PortfolioBoard({
   const [scoringId, setScoringId] = useState<string | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
+  const [sortBy, setSortBy] = useState<"alpha" | "deadline">("alpha");
   const ranOnce = useRef(false);
 
   const scoreOne = useCallback(
@@ -289,6 +290,22 @@ export default function PortfolioBoard({
   const actions = clusters
     .sort((a, b) => (a.opp.deadline! < b.opp.deadline! ? -1 : 1))
     .slice(0, 12);
+
+  // ── Card ordering: alphabetical, or soonest upcoming deadline first ──
+  const today = new Date().toISOString().slice(0, 10);
+  const soonestDeadline = (c: PortfolioCompany): string => {
+    const dates = (c.score?.opportunities ?? [])
+      .map((o) => o.deadline)
+      .filter((d): d is string => !!d && d >= today)
+      .sort();
+    return dates[0] ?? "9999";
+  };
+  const displayCompanies = [...companies].sort((a, b) =>
+    sortBy === "alpha"
+      ? a.name.localeCompare(b.name)
+      : soonestDeadline(a).localeCompare(soonestDeadline(b)) ||
+        a.name.localeCompare(b.name),
+  );
 
   return (
     <>
@@ -463,8 +480,26 @@ export default function PortfolioBoard({
         </section>
       )}
 
+      <div className="company-sort">
+        <span className="muted">Sort</span>
+        <button
+          type="button"
+          className={`mode-tab ${sortBy === "alpha" ? "active" : ""}`}
+          onClick={() => setSortBy("alpha")}
+        >
+          A–Z
+        </button>
+        <button
+          type="button"
+          className={`mode-tab ${sortBy === "deadline" ? "active" : ""}`}
+          onClick={() => setSortBy("deadline")}
+        >
+          Upcoming deadlines
+        </button>
+      </div>
+
       <section className="company-cards">
-        {companies.map((c) => {
+        {displayCompanies.map((c) => {
           const s = c.score;
           const err = errors[c.id];
           const isScoring = scoringId === c.id;
@@ -511,6 +546,15 @@ export default function PortfolioBoard({
                       {CLIMATE_LABEL[s.regClimate]}
                     </span>
                   )}
+                  <button
+                    type="button"
+                    className="link-btn"
+                    onClick={() => scoreOne(c.id)}
+                    disabled={isBusy}
+                    title="Re-run the research and scoring for this company"
+                  >
+                    {isScoring ? "Running…" : "Re-run ↺"}
+                  </button>
                 </div>
               </div>
 
@@ -654,8 +698,7 @@ export default function PortfolioBoard({
                       {c.graph && (
                         <details className="graph-block">
                           <summary className="muted">
-                            Regulatory profile (drafted by Claude — the lens
-                            used for matching)
+                            Regulatory Profile (automatically generated)
                           </summary>
                           <div className="graph-lines">
                             {c.graph.businessModel && (
@@ -793,9 +836,6 @@ export default function PortfolioBoard({
                                     </span>
                                   )}
                                   <span className="evidence-why">
-                                    {o.affectedNode && (
-                                      <strong>{o.affectedNode}: </strong>
-                                    )}
                                     {o.mechanism ?? o.whyRelevant}
                                   </span>
                                   {o.position && (

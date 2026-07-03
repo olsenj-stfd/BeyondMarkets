@@ -44,8 +44,7 @@ export default async function Home() {
           Score a whole book of companies on non-dilutive capital within reach,
           regulatory climate, and policy-dependency risk — grounded in real,
           dated programs. Paste a list of names and we&apos;ll research each one,
-          upload a CSV, or add them by hand. Assessing a single venture?{" "}
-          <Link href="/assess">Quick assessment →</Link>
+          upload a CSV, or add them by hand.
         </p>
       </section>
 

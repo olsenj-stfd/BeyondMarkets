@@ -38,17 +38,13 @@ export default function Header() {
         {ready &&
           (email ? (
             <>
+              {/* /assess (quick assessment) and /projects still exist but are
+                  unlisted pending a revamp. */}
               <Link href="/" className="nav-link">
-                Portfolios
-              </Link>
-              <Link href="/assess" className="nav-link">
-                Quick assessment
+                My portfolios
               </Link>
               <Link href="/dashboard" className="nav-link">
                 Deadlines
-              </Link>
-              <Link href="/projects" className="nav-link">
-                My projects
               </Link>
               <Link href="/feedback" className="nav-link">
                 Feedback
