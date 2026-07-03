@@ -1,16 +1,23 @@
+/* Editorial ink-on-paper design system: flat warm paper, hairline ink
+   borders, square corners, uppercase micro-labels, serif display type.
+   The legacy accent variables are remapped to ink washes so every rule that
+   references them degrades to monochrome automatically. */
 :root {
-  --bg-base: #e8e5d8;
-  --bg-glass: rgba(255, 255, 255, 0.4);
-  --bg-solid: rgba(255, 255, 255, 0.5);
-  --accent-yellow: #e7f65e;
-  --accent-orange: #f9a16c;
-  --text-primary: #1c1c1c;
-  --text-secondary: rgba(28, 28, 28, 0.6);
-  --border-soft: rgba(255, 255, 255, 0.3);
-  --line: rgba(28, 28, 28, 0.12);
-  --radius-lg: 32px;
-  --radius-md: 20px;
-  --radius-pill: 100px;
+  --bg-base: #f2e7da;
+  --bg-glass: transparent;
+  --bg-solid: rgba(255, 255, 255, 0.35);
+  --accent-yellow: rgba(42, 37, 34, 0.08);
+  --accent-orange: rgba(42, 37, 34, 0.16);
+  --text-primary: #2a2522;
+  --text-secondary: #4a433e;
+  --border-soft: #2a2522;
+  --line: rgba(42, 37, 34, 0.18);
+  --radius-lg: 0;
+  --radius-md: 0;
+  --radius-pill: 0;
+  --font-sans: var(--font-dm-sans), "DM Sans", -apple-system, BlinkMacSystemFont,
+    sans-serif;
+  --font-serif: var(--font-playfair), "Playfair Display", Georgia, serif;
 }
 
 * {
@@ -22,13 +29,10 @@
 
 body {
   background-color: var(--bg-base);
-  background-image: radial-gradient(
-      1000px 500px at 85% -5%,
-      rgba(249, 161, 108, 0.25),
-      transparent 60%
-    ),
-    radial-gradient(900px 500px at 0% 0%, rgba(231, 246, 94, 0.25), transparent 55%);
   color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  line-height: 1.5;
   min-height: 100vh;
 }
 
@@ -132,13 +136,12 @@ body {
   backdrop-filter: blur(10px);
 }
 
-/* ───────── Glass card ───────── */
+/* ───────── Card (flat, hairline ink border) ───────── */
 .glass-card {
   background: var(--bg-glass);
-  backdrop-filter: blur(10px);
   border: 1px solid var(--border-soft);
   border-radius: var(--radius-lg);
-  padding: 32px;
+  padding: 24px;
 }
 
 .intro-card {
@@ -1741,4 +1744,270 @@ details.more[open] summary::before {
   .portfolio-row-grid {
     grid-template-columns: 1fr;
   }
+}
+
+/* ═══════════ Editorial refresh: type, labels & monochrome accents ═══════════
+   Overrides that convert the remaining colored/rounded primitives to the
+   ink-on-paper system. Kept in one layer so the design reads top-down:
+   serif display type, uppercase micro-labels, hairline ink everything. */
+
+/* Display type: serif, light */
+.header h1,
+.section-title,
+.auth-title,
+.stat-value,
+.score-num,
+.score-band,
+.defining-title,
+.balance-amount,
+.card h3,
+.company-head h3,
+.portfolio-list-item h3,
+.project-link h3 {
+  font-family: var(--font-serif);
+  font-weight: 400;
+  letter-spacing: 0;
+}
+
+.header h1 {
+  text-transform: uppercase;
+  font-size: 20px;
+  letter-spacing: 0.05em;
+}
+
+/* Micro-labels: 9-10px, uppercase, tracked out */
+.stat-label,
+.score-cap,
+.scoping-label,
+.project-date,
+.opp-source,
+.defining-label,
+.portfolio-row-num,
+.nav-link,
+.scope-pill,
+.tagline {
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.scope-pill {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  backdrop-filter: none;
+  padding: 8px 14px;
+}
+
+.nav-link:hover,
+.nav-link.danger:hover {
+  border-bottom-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Buttons: square, uppercase, ink-filled primary / outlined ghost */
+.pill-btn {
+  background: var(--text-primary);
+  color: var(--bg-base);
+  border: 1px solid var(--text-primary);
+  border-radius: 0;
+  text-transform: uppercase;
+  letter-spacing: 0.15em;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 14px 22px;
+}
+
+.pill-btn:hover:not(:disabled) {
+  background: var(--text-secondary);
+  transform: none;
+  box-shadow: none;
+}
+
+.pill-btn.ghost {
+  background: transparent;
+  color: var(--text-primary);
+}
+
+.pill-btn.ghost:hover:not(:disabled) {
+  background: rgba(42, 37, 34, 0.05);
+}
+
+.pill-btn .spinner {
+  border-color: currentColor;
+  border-top-color: transparent;
+}
+
+/* Chips, options, tabs: outlined; selected = ink-filled */
+.chip,
+.option,
+.mode-tab {
+  border: 1px solid var(--line);
+  border-radius: 0;
+  background: transparent;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.chip.selected,
+.option.selected,
+.mode-tab.active {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-base);
+}
+
+/* Fields: hairline ink borders on paper */
+textarea,
+.field input,
+.field select,
+.field textarea,
+.scoping-field select,
+.scoping-field input,
+.portfolio-row input,
+.portfolio-row select,
+.portfolio-row textarea,
+.save-name {
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+
+textarea:focus,
+.field input:focus,
+.field select:focus,
+.field textarea:focus,
+.scoping-field select:focus,
+.scoping-field input:focus,
+.portfolio-row input:focus,
+.portfolio-row select:focus,
+.portfolio-row textarea:focus,
+.save-name:focus {
+  border-color: var(--text-primary);
+}
+
+/* Badges: square hairline ink, monochrome semantics
+   (filled = tailwind/in force, outline = neutral, dashed = headwind) */
+.badge,
+.opp-badge {
+  border-radius: 0;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--text-primary);
+  font-size: 9px;
+  letter-spacing: 0.12em;
+}
+
+.badge-inforce,
+.badge-tailwind,
+.opp-badge.fit {
+  background: var(--text-primary);
+  border-color: var(--text-primary);
+  color: var(--bg-base);
+}
+
+.badge-proposed,
+.badge-neutral,
+.opp-badge.california,
+.opp-badge.federal {
+  background: transparent;
+  border-color: var(--text-primary);
+  color: var(--text-primary);
+}
+
+.badge-headwind {
+  background: transparent;
+  border: 1px dashed var(--text-primary);
+  color: var(--text-primary);
+}
+
+/* Bands & risk words: ink weights instead of traffic-light colors */
+.band-high,
+.risk-high {
+  color: var(--text-primary);
+  font-weight: 500;
+  border-bottom: 2px solid var(--text-primary);
+}
+
+.band-medium,
+.risk-medium {
+  color: var(--text-primary);
+  border-bottom: 1px solid var(--line);
+}
+
+.band-low,
+.risk-low {
+  color: var(--text-secondary);
+  border-bottom: 1px dotted var(--line);
+}
+
+/* Climate dots: filled / half / hollow ink */
+.dot-tailwind {
+  background: var(--text-primary);
+}
+
+.dot-neutral {
+  background: rgba(42, 37, 34, 0.35);
+}
+
+.dot-headwind {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+}
+
+/* Callouts: hairline boxes, no tinted fills */
+.error {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  border-left-width: 4px;
+  border-radius: 0;
+}
+
+.notice,
+.watch-item {
+  background: transparent;
+  border: 1px solid var(--text-primary);
+  border-radius: 0;
+}
+
+.regime-shift {
+  background: transparent;
+  border: 1px dashed var(--text-primary);
+  border-radius: 0;
+}
+
+.key-dates {
+  background: rgba(42, 37, 34, 0.05);
+  border: 1px solid var(--line);
+  border-radius: 0;
+}
+
+.entity-gate {
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+/* Links & stars */
+.card a,
+.act-body a,
+.evidence-opps a,
+.defining-title a {
+  border-bottom-color: var(--line);
+}
+
+.star-btn.starred {
+  color: var(--text-primary);
+}
+
+.consideration::before {
+  background: var(--text-primary);
+}
+
+/* Column accents → uniform hairline */
+.col-grant .column-head,
+.col-partner .column-head,
+.col-regulation .column-head {
+  border-bottom-color: var(--text-primary);
 }
