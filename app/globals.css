@@ -1417,6 +1417,17 @@ details.more[open] summary::before {
   margin: 0 0 14px;
 }
 
+.board-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.add-companies {
+  margin-bottom: 20px;
+}
+
 /* Company cards */
 .company-cards {
   display: flex;

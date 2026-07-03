@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import { csvToCompanies, namesToCompanies } from "@/lib/company-input";
 import type {
   PortfolioCompany,
   RegClimate,
@@ -161,6 +162,11 @@ export default function PortfolioBoard({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [expanded, setExpanded] = useState<Record<string, boolean>>({});
   const [sortBy, setSortBy] = useState<"alpha" | "deadline">("alpha");
+  const [addOpen, setAddOpen] = useState(false);
+  const [addMode, setAddMode] = useState<"names" | "csv">("names");
+  const [addText, setAddText] = useState("");
+  const [addLoading, setAddLoading] = useState(false);
+  const [addError, setAddError] = useState<string | null>(null);
   const ranOnce = useRef(false);
 
   const scoreOne = useCallback(
@@ -206,12 +212,28 @@ export default function PortfolioBoard({
     [portfolioId],
   );
 
-  // Score any unscored companies sequentially (keeps each request small).
-  const runQueue = useCallback(
-    async (ids: string[]) => {
-      for (const id of ids) {
-        await scoreOne(id);
-      }
+  // Single serialized scoring queue: each score rewrites the whole companies
+  // array server-side, so two in-flight scores would clobber each other.
+  // Everything (initial run, re-score all, per-company re-runs, newly added
+  // companies) funnels through here.
+  const pendingRef = useRef<string[]>([]);
+  const processingRef = useRef(false);
+  const enqueue = useCallback(
+    (ids: string[]) => {
+      const fresh = ids.filter((id) => !pendingRef.current.includes(id));
+      pendingRef.current.push(...fresh);
+      if (processingRef.current) return;
+      processingRef.current = true;
+      void (async () => {
+        try {
+          while (pendingRef.current.length > 0) {
+            const next = pendingRef.current.shift()!;
+            await scoreOne(next);
+          }
+        } finally {
+          processingRef.current = false;
+        }
+      })();
     },
     [scoreOne],
   );
@@ -220,12 +242,43 @@ export default function PortfolioBoard({
     if (ranOnce.current) return;
     ranOnce.current = true;
     const unscored = initialCompanies.filter((c) => !c.score).map((c) => c.id);
-    if (unscored.length > 0) void runQueue(unscored);
+    if (unscored.length > 0) enqueue(unscored);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function rescoreAll() {
-    void runQueue(companies.map((c) => c.id));
+    enqueue(companies.map((c) => c.id));
+  }
+
+  // ── Add companies to an already-created (possibly scored) portfolio ──
+  const addParsed =
+    addMode === "names" ? namesToCompanies(addText) : csvToCompanies(addText);
+
+  async function addCompanies(e: React.FormEvent) {
+    e.preventDefault();
+    if (addParsed.length === 0) return;
+    setAddLoading(true);
+    setAddError(null);
+    try {
+      const res = await fetch(`/api/portfolios/${portfolioId}/companies`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ companies: addParsed }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.companies) {
+        setAddError(data.error ?? "Could not add the companies. Please try again.");
+        return;
+      }
+      setCompanies(data.companies as PortfolioCompany[]);
+      setAddText("");
+      setAddOpen(false);
+      enqueue((data.addedIds as string[]) ?? []);
+    } catch {
+      setAddError("Network error. Please try again.");
+    } finally {
+      setAddLoading(false);
+    }
   }
 
   const scored = companies.filter((c) => c.score);
@@ -319,15 +372,80 @@ export default function PortfolioBoard({
           the research — open a company&apos;s program analysis for the
           reasoning.
         </p>
-        <button
-          type="button"
-          className="pill-btn ghost"
-          onClick={rescoreAll}
-          disabled={isBusy}
-        >
-          {isBusy ? "Scoring…" : "Re-score all ↺"}
-        </button>
+        <div className="board-actions">
+          <button
+            type="button"
+            className="pill-btn ghost"
+            onClick={rescoreAll}
+            disabled={isBusy}
+          >
+            {isBusy ? "Scoring…" : "Re-score all ↺"}
+          </button>
+          <button
+            type="button"
+            className="pill-btn ghost"
+            onClick={() => setAddOpen((o) => !o)}
+          >
+            {addOpen ? "Close" : "+ Add companies"}
+          </button>
+        </div>
       </section>
+
+      {addOpen && (
+        <section className="glass-card add-companies">
+          <form onSubmit={addCompanies} className="portfolio-form">
+            <div className="mode-tabs">
+              <button
+                type="button"
+                className={`mode-tab ${addMode === "names" ? "active" : ""}`}
+                onClick={() => setAddMode("names")}
+              >
+                By name (web research)
+              </button>
+              <button
+                type="button"
+                className={`mode-tab ${addMode === "csv" ? "active" : ""}`}
+                onClick={() => setAddMode("csv")}
+              >
+                Paste CSV
+              </button>
+            </div>
+            <label className="field">
+              <span>
+                {addMode === "names"
+                  ? "Company names — one per line (optionally “Name, website”)"
+                  : "Paste CSV — columns: name, description, sector, stage, geography, website (header row optional)"}
+              </span>
+              <textarea
+                value={addText}
+                onChange={(e) => setAddText(e.target.value)}
+                placeholder={
+                  addMode === "names"
+                    ? "Heirloom Carbon\nForm Energy, formenergy.com"
+                    : "name,description,sector,stage,geography\nHeirloom,Direct air capture using limestone,Carbon removal,Series B,California"
+                }
+                rows={4}
+              />
+            </label>
+            <div className="portfolio-form-actions">
+              <span className="muted">
+                {addParsed.length}{" "}
+                {addParsed.length === 1 ? "company" : "companies"} detected —
+                they&apos;ll be researched &amp; scored after the current queue
+              </span>
+              <button
+                type="submit"
+                className="pill-btn"
+                disabled={addLoading || addParsed.length === 0}
+              >
+                {addLoading && <span className="spinner" />}
+                Add &amp; score
+              </button>
+            </div>
+            {addError && <div className="error">{addError}</div>}
+          </form>
+        </section>
+      )}
 
       <details className="glass-card methodology">
         <summary>How to read these scores</summary>
@@ -549,8 +667,8 @@ export default function PortfolioBoard({
                   <button
                     type="button"
                     className="link-btn"
-                    onClick={() => scoreOne(c.id)}
-                    disabled={isBusy}
+                    onClick={() => enqueue([c.id])}
+                    disabled={isScoring}
                     title="Re-run the research and scoring for this company"
                   >
                     {isScoring ? "Running…" : "Re-run ↺"}
@@ -574,7 +692,7 @@ export default function PortfolioBoard({
                   <button
                     type="button"
                     className="link-btn inline"
-                    onClick={() => scoreOne(c.id)}
+                    onClick={() => enqueue([c.id])}
                   >
                     Retry
                   </button>
