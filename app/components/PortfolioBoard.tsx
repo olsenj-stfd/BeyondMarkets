@@ -51,8 +51,25 @@ const EXIT_LABEL: Record<string, string> = {
 
 type Band = "High" | "Medium" | "Low";
 
-function riskBand(n: number): Band {
-  return n >= 67 ? "High" : n >= 34 ? "Medium" : "Low";
+// Repeal-prone flagship programs: a single dependency on one of these is enough
+// to flag high policy risk (they swing with each administration / budget).
+const FLAGSHIP_DEPENDENCY =
+  /45x|45v|45q|45y|48e|\bitc\b|\bptc\b|lcfs|\bira\b|inflation reduction|340b|medicaid|medicare/i;
+
+/**
+ * Policy risk — grounded in the specific subsidy/policy dependencies the model
+ * named, not an opaque number:
+ *   High   = depends on a flagship repeal-prone program, or on 2+ programs
+ *   Medium = depends on exactly one (non-flagship) program
+ *   Low    = no specific policy dependency identified
+ */
+function policyBand(dependencies: string[]): Band {
+  const deps = dependencies.filter((d) => d && d.trim());
+  if (deps.length === 0) return "Low";
+  if (deps.length >= 2 || deps.some((d) => FLAGSHIP_DEPENDENCY.test(d))) {
+    return "High";
+  }
+  return "Medium";
 }
 
 /**
@@ -161,7 +178,9 @@ export default function PortfolioBoard({
     },
     { tailwind: 0, neutral: 0, headwind: 0 } as Record<RegClimate, number>,
   );
-  const highRisk = scored.filter((c) => (c.score?.policyRisk ?? 0) >= 67);
+  const highRisk = scored.filter(
+    (c) => policyBand(c.score?.dependencies ?? []) === "High",
+  );
 
   // Cross-portfolio "act this quarter": real dated items in the next 90 days,
   // with the SAME program rolled up into one action listing every affected
@@ -245,10 +264,21 @@ export default function PortfolioBoard({
           </ul>
           <p>
             <strong>Policy risk</strong> — how dependent the company&apos;s thesis
-            is on a subsidy or policy that could be repealed (a model
-            assessment). <b>High</b> ≥ 67, <b>Medium</b> 34–66, <b>Low</b> below
-            34.
+            is on a subsidy or policy that could be repealed, from the specific
+            programs the research names:
           </p>
+          <ul>
+            <li>
+              <b>High</b> — depends on a repeal-prone flagship program (e.g. 45X,
+              45V, ITC, LCFS, Medicaid) or on 2+ programs
+            </li>
+            <li>
+              <b>Medium</b> — depends on exactly one non-flagship program
+            </li>
+            <li>
+              <b>Low</b> — no specific policy dependency identified
+            </li>
+          </ul>
           <p>
             <strong>Regulatory climate</strong> — the direction of regulatory
             momentum for the company&apos;s sector (a model assessment):
@@ -427,11 +457,11 @@ export default function PortfolioBoard({
                     </div>
                     <div className="score-metric">
                       <span
-                        className={`score-band risk-${riskBand(
-                          s.policyRisk,
+                        className={`score-band risk-${policyBand(
+                          s.dependencies,
                         ).toLowerCase()}`}
                       >
-                        {riskBand(s.policyRisk)}
+                        {policyBand(s.dependencies)}
                       </span>
                       <span className="score-cap">Policy risk</span>
                     </div>

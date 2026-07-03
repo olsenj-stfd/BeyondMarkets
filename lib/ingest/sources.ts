@@ -223,6 +223,18 @@ const GRANTS_GOV_KEYWORDS = [
   "transportation",
   "environmental justice",
   "resilience",
+  // Healthcare, workforce, and economic-development angles.
+  "public health",
+  "behavioral health",
+  "health workforce",
+  "workforce development",
+  "apprenticeship",
+  "job training",
+  "economic development",
+  "small business",
+  "entrepreneurship",
+  "rural business",
+  "community development",
 ];
 
 export async function fetchGrantsGov(): Promise<OpportunityRow[]> {

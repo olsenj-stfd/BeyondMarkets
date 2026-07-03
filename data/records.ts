@@ -1,11 +1,12 @@
 import type { RegRecord } from "@/lib/types";
 
 /**
- * v1 curated dataset: U.S. federal + California regulatory, grant, and partner
- * landscape for climate / impact ventures. Hand-curated to prove the matching
- * flow across domains (air, water, energy, climate, cross-cutting). Each record
- * is summarized for orientation only — always confirm specifics against the
- * linked official source before making a compliance or funding decision.
+ * Curated dataset: U.S. federal + California regulatory, grant, and partner
+ * landscape for mission-driven ventures. Hand-curated across sectors — climate
+ * & environment (air, water, energy, transportation, materials), plus
+ * healthcare, workforce development, and economic development. Each record is
+ * summarized for orientation only — always confirm specifics against the linked
+ * official source before making a compliance or funding decision.
  */
 export const records: RegRecord[] = [
   // ───────────────────────── REGULATIONS ─────────────────────────
@@ -1120,5 +1121,413 @@ export const records: RegRecord[] = [
       "Engage the ports' environmental/technology-advancement programs and their tenant terminal operators; pair pilots with SCAQMD/CARB incentive funding where possible.",
     tags: ["municipal", "port", "transportation", "freight", "zero emission", "pilots", "infrastructure", "los angeles"],
     link: "https://kentico.portoflosangeles.org/environment/air-quality",
+  },
+
+  // ───────────────────────── HEALTHCARE ─────────────────────────
+  {
+    id: "hrsa-health-center-program",
+    type: "grant",
+    title: "HRSA Health Center Program (Section 330)",
+    agency: "Health Resources & Services Administration",
+    agencyAcronym: "HRSA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "Federal grant funding for community health centers delivering primary care to underserved and low-income populations, plus periodic New Access Point and expansion opportunities.",
+    applicability:
+      "Federally Qualified Health Centers, look-alikes, and community/nonprofit primary-care providers — and health-tech ventures partnering with or selling into safety-net clinics.",
+    context:
+      "HRSA is the backbone of the U.S. safety-net care system. Ventures rarely receive 330 grants directly but often partner with grantee clinics, which shapes procurement and reimbursement dynamics.",
+    howToEngage:
+      "Track funding opportunities on the HRSA site and Grants.gov; if you're a provider, confirm eligibility and service-area need. Ventures should identify FQHC partners as design/launch customers.",
+    tags: ["healthcare", "primary care", "safety net", "clinics", "federal grant", "underserved"],
+    link: "https://bphc.hrsa.gov/funding",
+  },
+  {
+    id: "nih-sbir-sttr",
+    type: "grant",
+    title: "NIH SBIR/STTR (Seed Fund)",
+    agency: "National Institutes of Health",
+    agencyAcronym: "NIH",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "Non-dilutive R&D grants and contracts for small businesses developing biomedical, diagnostic, digital-health, and medical-device technologies with commercial potential.",
+    applicability:
+      "For-profit U.S. small businesses (<500 employees) working on health/life-science innovations. Phase I proves feasibility; Phase II funds development; Phase IIB supports commercialization.",
+    context:
+      "The NIH is the largest SBIR/STTR funder after DoD — a primary non-dilutive path for health-tech and therapeutics startups. Awards also carry a strong certification effect for follow-on VC.",
+    howToEngage:
+      "Identify the relevant NIH institute and program officer, match to an open funding opportunity (omnibus or targeted), and submit through Grants.gov/eRA Commons. Talk to a program officer before applying.",
+    tags: ["healthcare", "biomedical", "sbir", "sttr", "non-dilutive", "r&d", "medical device", "diagnostics"],
+    link: "https://seed.nih.gov/small-business-funding",
+  },
+  {
+    id: "arpa-h",
+    type: "grant",
+    title: "ARPA-H (Advanced Research Projects Agency for Health)",
+    agency: "Advanced Research Projects Agency for Health",
+    agencyAcronym: "ARPA-H",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "High-risk, high-reward funding for breakthrough biomedical and health technologies, awarded through open solicitations and focused program calls.",
+    applicability:
+      "Ventures, universities, and teams pursuing transformative health solutions (therapeutics, platforms, health systems). Suited to ambitious, milestone-driven programs rather than incremental work.",
+    context:
+      "Modeled on DARPA, ARPA-H funds ambitious 'moonshot' health R&D. Solicitations are program-specific and evolve; the open BAA is the standing entry point.",
+    howToEngage:
+      "Monitor ARPA-H open solicitations and the open Broad Agency Announcement; align proposals to a stated program's metrics and pitch a clear breakthrough milestone.",
+    tags: ["healthcare", "biomedical", "moonshot", "r&d", "federal", "breakthrough"],
+    link: "https://arpa-h.gov/",
+  },
+  {
+    id: "samhsa-grants",
+    type: "grant",
+    title: "SAMHSA Grants (Behavioral & Mental Health)",
+    agency: "Substance Abuse & Mental Health Services Administration",
+    agencyAcronym: "SAMHSA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "Discretionary grants for mental-health and substance-use prevention, treatment, and recovery services and infrastructure.",
+    applicability:
+      "Providers, community organizations, and behavioral-health ventures delivering or enabling prevention, treatment, crisis, and recovery services.",
+    context:
+      "SAMHSA is the primary federal funder for behavioral health. Its grants shape service models and reimbursement expectations that behavioral-health tech must fit.",
+    howToEngage:
+      "Review SAMHSA's Notice of Funding Opportunities, confirm eligibility (often nonprofits/governments), and consider partnering with an eligible entity if you're a for-profit vendor.",
+    tags: ["healthcare", "behavioral health", "mental health", "substance use", "federal grant"],
+    link: "https://www.samhsa.gov/grants",
+  },
+  {
+    id: "cirm",
+    type: "grant",
+    title: "California Institute for Regenerative Medicine (CIRM)",
+    agency: "California Institute for Regenerative Medicine",
+    agencyAcronym: "CIRM",
+    level: "state",
+    jurisdiction: "California",
+    domain: "healthcare",
+    summary:
+      "California's voter-created stem-cell and regenerative-medicine agency funding discovery, translational, and clinical-stage research and manufacturing.",
+    applicability:
+      "California-based researchers and companies advancing regenerative medicine, cell/gene therapy, and related manufacturing and delivery infrastructure.",
+    context:
+      "Funded by Proposition 14, CIRM is a large, California-specific non-dilutive source for regenerative medicine — a rare state-level analogue to NIH for this field.",
+    howToEngage:
+      "Track CIRM funding opportunities by stage (discovery/translational/clinical), confirm California-based operations, and align to the program's translational milestones.",
+    tags: ["healthcare", "regenerative medicine", "cell therapy", "gene therapy", "california", "non-dilutive"],
+    link: "https://www.cirm.ca.gov/",
+  },
+  {
+    id: "hcai-health-workforce",
+    type: "grant",
+    title: "HCAI Health Workforce Programs",
+    agency: "California Department of Health Care Access and Information",
+    agencyAcronym: "HCAI",
+    level: "state",
+    jurisdiction: "California",
+    domain: "healthcare",
+    summary:
+      "California scholarships, loan repayment, and grant programs that expand and diversify the health workforce, plus health-facility data and financing oversight.",
+    applicability:
+      "Health-workforce training programs, provider organizations, and ventures building health-workforce pipelines or education in California.",
+    context:
+      "HCAI (formerly OSHPD) is California's hub for health-workforce funding and facilities data — relevant to workforce-facing health ventures and provider partners.",
+    howToEngage:
+      "Review HCAI loan/scholarship/grant programs for current cycles; partner with eligible training institutions where a program requires an accredited provider.",
+    tags: ["healthcare", "workforce", "california", "loan repayment", "scholarship", "training"],
+    link: "https://hcai.ca.gov/loans-scholarships-grants/",
+  },
+  {
+    id: "hipaa",
+    type: "regulation",
+    title: "HIPAA Privacy & Security Rules",
+    agency: "U.S. Department of Health & Human Services, Office for Civil Rights",
+    agencyAcronym: "HHS OCR",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "Federal rules governing the privacy and security of protected health information (PHI) held by covered entities and their business associates.",
+    applicability:
+      "Any venture that creates, receives, stores, or transmits PHI — most digital-health, health-data, and care-delivery companies act as covered entities or business associates.",
+    context:
+      "HIPAA compliance (and Business Associate Agreements) is table stakes for selling into providers and payers. It shapes data architecture, vendor contracts, and breach-response obligations.",
+    howToEngage:
+      "Map whether you're a covered entity or business associate, implement the required safeguards, execute BAAs with partners, and stand up breach-notification procedures early.",
+    tags: ["healthcare", "privacy", "data security", "phi", "compliance", "digital health"],
+    link: "https://www.hhs.gov/hipaa/index.html",
+  },
+
+  // ───────────────────────── WORKFORCE DEVELOPMENT ─────────────────────────
+  {
+    id: "dol-wioa-eta",
+    type: "grant",
+    title: "DOL Employment & Training (WIOA) Grants",
+    agency: "U.S. Department of Labor, Employment & Training Administration",
+    agencyAcronym: "DOL ETA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "workforce",
+    summary:
+      "Formula and competitive grants under the Workforce Innovation and Opportunity Act funding job training, sector partnerships, and reemployment services.",
+    applicability:
+      "Workforce boards, training providers, community colleges, and workforce-tech ventures partnering with the public workforce system.",
+    context:
+      "WIOA is the backbone of the U.S. public workforce system. Funds flow through state and local workforce boards, so ventures typically engage as providers or partners rather than direct grantees.",
+    howToEngage:
+      "Identify your state/local Workforce Development Board, get on Eligible Training Provider Lists where relevant, and watch ETA's competitive grant announcements (e.g., sector and apprenticeship grants).",
+    tags: ["workforce", "job training", "wioa", "federal grant", "reskilling", "sector partnership"],
+    link: "https://www.dol.gov/agencies/eta/grants",
+  },
+  {
+    id: "apprenticeship-gov",
+    type: "grant",
+    title: "Registered Apprenticeship & Apprenticeship Building America",
+    agency: "U.S. Department of Labor",
+    agencyAcronym: "DOL",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "workforce",
+    summary:
+      "Grants and technical assistance to expand Registered Apprenticeship programs across industries, including new and non-traditional sectors.",
+    applicability:
+      "Employers, intermediaries, and ed-tech/workforce ventures building or scaling earn-and-learn apprenticeship models.",
+    context:
+      "Registered Apprenticeship is a growing federal priority beyond the building trades — into healthcare, tech, and clean energy — making it a channel for workforce ventures.",
+    howToEngage:
+      "Explore becoming a program sponsor or intermediary via apprenticeship.gov, and track Apprenticeship Building America and State Apprenticeship Expansion grant cycles.",
+    tags: ["workforce", "apprenticeship", "earn and learn", "employer", "federal grant"],
+    link: "https://www.apprenticeship.gov/",
+  },
+  {
+    id: "ca-etp",
+    type: "grant",
+    title: "California Employment Training Panel (ETP)",
+    agency: "California Employment Training Panel",
+    agencyAcronym: "ETP",
+    level: "state",
+    jurisdiction: "California",
+    domain: "workforce",
+    summary:
+      "State program that reimburses California employers for the cost of training incumbent workers in skills that support competitiveness and retention.",
+    applicability:
+      "California employers (and multiple-employer/training-agency intermediaries) upskilling incumbent staff — including scaling ventures adding technical roles.",
+    context:
+      "ETP is funded by an employer payroll assessment and pays on performance (trainees must be retained). It's a direct, employer-facing non-dilutive lever specific to California.",
+    howToEngage:
+      "Apply directly or through a training agency; scope eligible occupations and training, and plan for the performance-based (retention) reimbursement structure.",
+    tags: ["workforce", "employer training", "california", "incumbent worker", "reimbursement"],
+    link: "https://etp.ca.gov/",
+  },
+  {
+    id: "ca-strong-workforce",
+    type: "grant",
+    title: "California Community Colleges Strong Workforce Program",
+    agency: "California Community Colleges Chancellor's Office",
+    agencyAcronym: "CCCCO",
+    level: "state",
+    jurisdiction: "California",
+    domain: "workforce",
+    summary:
+      "State investment in career-technical education and regional workforce training delivered through California's community colleges.",
+    applicability:
+      "Employers and workforce ventures partnering with community colleges on curriculum, work-based learning, and regional skills pipelines.",
+    context:
+      "The Strong Workforce Program aligns community-college CTE with regional labor-market needs — a partnership channel for ventures building talent pipelines in California.",
+    howToEngage:
+      "Engage regional consortia and college workforce/CTE deans; propose employer partnerships, work-based learning, or curriculum aligned to in-demand occupations.",
+    tags: ["workforce", "community college", "cte", "california", "regional", "work-based learning"],
+    link: "https://www.cccco.edu/College-Professionals/Key-Initiatives/Strong-Workforce-Program",
+  },
+
+  // ───────────────────── ECONOMIC DEVELOPMENT ─────────────────────
+  {
+    id: "eda-programs",
+    type: "grant",
+    title: "EDA Economic Development Programs",
+    agency: "U.S. Economic Development Administration",
+    agencyAcronym: "EDA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "Federal grants for regional economic development — public works, planning, Build to Scale, Tech Hubs, and Good Jobs Challenge — that strengthen local innovation ecosystems.",
+    applicability:
+      "Regional coalitions, economic-development organizations, universities, and ventures anchoring cluster/ecosystem or scale-up strategies.",
+    context:
+      "EDA funds the connective tissue of regional economies. Ventures usually benefit as coalition members or beneficiaries of ecosystem grants rather than as sole applicants.",
+    howToEngage:
+      "Connect with your regional EDA office and Economic Development District; watch Build to Scale and other NOFOs, and position within a regional coalition application.",
+    tags: ["economic development", "regional", "ecosystem", "tech hubs", "federal grant", "cluster"],
+    link: "https://www.eda.gov/funding",
+  },
+  {
+    id: "sba-programs",
+    type: "grant",
+    title: "SBA Loan & Investment Programs",
+    agency: "U.S. Small Business Administration",
+    agencyAcronym: "SBA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "Federally-backed small-business financing — 7(a) and 504 loans, microloans, and SBIC equity — plus growth programs that expand access to capital.",
+    applicability:
+      "For-profit small businesses seeking debt or growth capital, and ventures that can access SBA-guaranteed lending or SBIC-backed investment.",
+    context:
+      "SBA doesn't usually lend directly; it guarantees loans made by partner lenders and licenses SBIC funds. It's a core non-VC capital channel for revenue-stage companies.",
+    howToEngage:
+      "Find an SBA-preferred lender for 7(a)/504, or an SBIC for equity; a local SBDC (see below) can help you prepare and match to the right program.",
+    tags: ["economic development", "small business", "loans", "capital access", "sbic", "federal"],
+    link: "https://www.sba.gov/funding-programs",
+  },
+  {
+    id: "usda-rural-business",
+    type: "grant",
+    title: "USDA Rural Development Business Programs",
+    agency: "U.S. Department of Agriculture, Rural Development",
+    agencyAcronym: "USDA RD",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "Loans and grants supporting business development, job creation, and infrastructure in rural areas — including Business & Industry loan guarantees and Rural Business Development Grants.",
+    applicability:
+      "Businesses and intermediaries operating in USDA-defined rural areas, including ag-tech, clean-energy, and manufacturing ventures with rural footprints.",
+    context:
+      "USDA RD is a major rural-focused capital source. Eligibility hinges on rural geography, so location determines whether these programs apply.",
+    howToEngage:
+      "Confirm your project's rural eligibility, then contact your USDA Rural Development state office to match to B&I, RBDG, or REAP (energy) programs.",
+    tags: ["economic development", "rural", "business", "loans", "job creation", "federal"],
+    link: "https://www.rd.usda.gov/programs-services/business-programs",
+  },
+  {
+    id: "cdfi-fund",
+    type: "grant",
+    title: "CDFI Fund",
+    agency: "U.S. Department of the Treasury, CDFI Fund",
+    agencyAcronym: "CDFI Fund",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "Treasury program that certifies and capitalizes Community Development Financial Institutions and awards New Markets Tax Credits to spur investment in underserved communities.",
+    applicability:
+      "CDFIs, mission lenders, and ventures seeking community-development capital or partners financing projects in low-income communities.",
+    context:
+      "The CDFI Fund channels capital into communities that mainstream finance underserves. Ventures typically access it via CDFI lending partners rather than directly.",
+    howToEngage:
+      "If you're a lender, pursue CDFI certification and CDFI Program/NMTC rounds; if you're a venture, identify certified CDFIs as financing partners for community-based projects.",
+    tags: ["economic development", "community development", "cdfi", "capital access", "new markets tax credit", "federal"],
+    link: "https://www.cdfifund.gov/",
+  },
+  {
+    id: "ca-competes",
+    type: "grant",
+    title: "California Competes Tax Credit & Grant",
+    agency: "Governor's Office of Business and Economic Development",
+    agencyAcronym: "GO-Biz",
+    level: "state",
+    jurisdiction: "California",
+    domain: "economic-development",
+    summary:
+      "Income-tax credit (and a companion grant) awarded to businesses that commit to creating jobs and making investments in California.",
+    applicability:
+      "Businesses of any size planning to grow employment and capital investment in California, evaluated on jobs, wages, and investment commitments.",
+    context:
+      "California Competes is GO-Biz's flagship business-attraction and retention incentive, awarded in competitive application periods against negotiated milestones.",
+    howToEngage:
+      "Apply during an open California Competes period through GO-Biz; model your job-creation and investment commitments, which become contractual milestones.",
+    tags: ["economic development", "tax credit", "california", "job creation", "investment", "go-biz"],
+    link: "https://business.ca.gov/california-competes-tax-credit/",
+  },
+  {
+    id: "ca-ibank",
+    type: "grant",
+    title: "California Infrastructure & Economic Development Bank (IBank)",
+    agency: "California Infrastructure and Economic Development Bank",
+    agencyAcronym: "IBank",
+    level: "state",
+    jurisdiction: "California",
+    domain: "economic-development",
+    summary:
+      "State financing authority offering loans, loan guarantees, and bond financing for infrastructure, small business, and economic-development projects in California.",
+    applicability:
+      "California small businesses (via the Small Business Finance Center loan guarantees), and public/private sponsors of infrastructure and economic-development projects.",
+    context:
+      "IBank provides low-cost public financing where private capital is thin — especially small-business loan guarantees and infrastructure lending in California.",
+    howToEngage:
+      "For small business, work through an IBank Financial Development Corporation partner for a loan guarantee; for infrastructure, engage IBank's lending programs directly.",
+    tags: ["economic development", "california", "loans", "loan guarantee", "infrastructure", "small business"],
+    link: "https://www.ibank.ca.gov/",
+  },
+
+  // ───────── ECOSYSTEM PARTNERS (healthcare / business / workforce) ─────────
+  {
+    id: "sbdc",
+    type: "partner",
+    title: "Small Business Development Centers (SBDC)",
+    agency: "U.S. Small Business Administration (SBDC network)",
+    agencyAcronym: "SBDC",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "A nationwide network of centers providing free advising and low-cost training to small businesses — including capital readiness, financials, and grant/loan navigation.",
+    applicability:
+      "Early- and growth-stage small businesses in any sector wanting hands-on help with financing, planning, and applying to SBA and other programs.",
+    context:
+      "SBDCs (often hosted at universities) are a free, local first stop for founders navigating capital and compliance — a practical complement to the funding programs above.",
+    howToEngage:
+      "Find your local SBDC and book free advising; use them to prepare loan/grant applications and financial projections before you approach lenders or agencies.",
+    tags: ["partner", "small business", "advising", "capital readiness", "ecosystem", "economic development"],
+    link: "https://www.sba.gov/local-assistance/resource-partners/small-business-development-centers-sbdc",
+  },
+  {
+    id: "mbda",
+    type: "partner",
+    title: "Minority Business Development Agency (MBDA) Business Centers",
+    agency: "U.S. Department of Commerce, Minority Business Development Agency",
+    agencyAcronym: "MBDA",
+    level: "federal",
+    jurisdiction: "United States",
+    domain: "economic-development",
+    summary:
+      "Federal agency and business-center network helping minority-owned businesses access capital, contracts, and markets, plus periodic competitive grants.",
+    applicability:
+      "Minority-owned businesses seeking growth capital, contracting opportunities, and scaling support across sectors.",
+    context:
+      "MBDA is the only federal agency dedicated to minority business enterprise growth; its centers provide concierge-style access to capital and contracts.",
+    howToEngage:
+      "Connect with your nearest MBDA Business Center for advising and matchmaking, and watch MBDA competitive grant announcements.",
+    tags: ["partner", "minority business", "capital access", "contracts", "ecosystem", "economic development"],
+    link: "https://www.mbda.gov/",
+  },
+  {
+    id: "jlabs",
+    type: "partner",
+    title: "Johnson & Johnson Innovation — JLABS",
+    agency: "Johnson & Johnson Innovation",
+    agencyAcronym: "JLABS",
+    level: "private",
+    jurisdiction: "United States",
+    domain: "healthcare",
+    summary:
+      "A no-equity life-science incubator network providing lab space, mentorship, and access to capital and pharma partnerships for early-stage health ventures.",
+    applicability:
+      "Early-stage healthcare, biotech, medtech, and digital-health startups that can use wet-lab/incubation space and corporate-network access without giving up equity.",
+    context:
+      "JLABS is a leading corporate life-science incubator (including a Bay Area site), offering ecosystem access that complements NIH/CIRM non-dilutive funding.",
+    howToEngage:
+      "Apply to a JLABS location or open call; align your milestones to what the incubator and its partnership network can accelerate.",
+    tags: ["partner", "healthcare", "biotech", "medtech", "incubator", "no-equity", "life science"],
+    link: "https://jlabs.jnjinnovation.com/",
   },
 ];
