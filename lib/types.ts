@@ -222,6 +222,34 @@ export interface CompanyScore {
   opportunities: ScoredOpportunity[];
 }
 
+/**
+ * Structured regulatory profile of a company — what the query generator and
+ * scorer reason over instead of the bare description. Money flowing to a
+ * company's partners, customers, or substitutes changes its market as much as
+ * money flowing to the company itself, so the value chain is first-class.
+ * Drafted by Claude, reviewable by the user.
+ */
+export interface CompanyGraph {
+  sectors: string[];
+  /** lender / marketplace / SaaS / provider / manufacturer / ... */
+  businessModel: string | null;
+  valueChain: {
+    customers: string[];
+    partners: string[];
+    substitutes: string[];
+    /** Who else funds the customer (federal aid, Medicaid, employers). */
+    payersUpstream: string[];
+  };
+  regulatoryRegimes: {
+    federal: string[];
+    state: string[];
+    agencies: string[];
+  };
+  operatingStates: string[];
+  /** Auto-generated search phrases spanning the whole graph; editable. */
+  keywordsExpanded: string[];
+}
+
 /** One company in a portfolio, with its (optional, lazily computed) score. */
 export interface PortfolioCompany {
   id: string;
@@ -234,6 +262,8 @@ export interface PortfolioCompany {
   website: string | null;
   /** How the profile was produced: manual entry / CSV, or web-search draft. */
   profileSource: "manual" | "web";
+  /** Structured regulatory profile; drafted at first scoring if absent. */
+  graph?: CompanyGraph | null;
   /** Exit status from web research: IPO, acquired, shutdown, private, unknown. */
   exitType: "ipo" | "acquired" | "shutdown" | "private" | "unknown" | null;
   /** Short exit detail, e.g. "Acquired by Stripe (2023)". */

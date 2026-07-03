@@ -512,6 +512,69 @@ export default function PortfolioBoard({
 
                   {open && (
                     <div className="company-evidence">
+                      {c.graph && (
+                        <details className="graph-block">
+                          <summary className="muted">
+                            Regulatory profile (drafted by Claude — the lens
+                            used for matching)
+                          </summary>
+                          <div className="graph-lines">
+                            {c.graph.businessModel && (
+                              <p className="evidence-line">
+                                <strong>Model:</strong> {c.graph.businessModel}
+                                {c.graph.sectors.length > 0 &&
+                                  ` · ${c.graph.sectors.join(", ")}`}
+                              </p>
+                            )}
+                            {c.graph.valueChain.customers.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>Customers:</strong>{" "}
+                                {c.graph.valueChain.customers.join(", ")}
+                              </p>
+                            )}
+                            {c.graph.valueChain.partners.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>Partners:</strong>{" "}
+                                {c.graph.valueChain.partners.join(", ")}
+                              </p>
+                            )}
+                            {c.graph.valueChain.substitutes.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>Substitutes:</strong>{" "}
+                                {c.graph.valueChain.substitutes.join(", ")}
+                              </p>
+                            )}
+                            {c.graph.valueChain.payersUpstream.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>Upstream payers:</strong>{" "}
+                                {c.graph.valueChain.payersUpstream.join(", ")}
+                              </p>
+                            )}
+                            {(c.graph.regulatoryRegimes.federal.length > 0 ||
+                              c.graph.regulatoryRegimes.state.length > 0) && (
+                              <p className="evidence-line">
+                                <strong>Regimes:</strong>{" "}
+                                {[
+                                  ...c.graph.regulatoryRegimes.federal,
+                                  ...c.graph.regulatoryRegimes.state,
+                                ].join(", ")}
+                              </p>
+                            )}
+                            {c.graph.regulatoryRegimes.agencies.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>Regulators:</strong>{" "}
+                                {c.graph.regulatoryRegimes.agencies.join(", ")}
+                              </p>
+                            )}
+                            {c.graph.operatingStates.length > 0 && (
+                              <p className="evidence-line">
+                                <strong>States:</strong>{" "}
+                                {c.graph.operatingStates.join(", ")}
+                              </p>
+                            )}
+                          </div>
+                        </details>
+                      )}
                       {s.regRationale && (
                         <p className="evidence-line">
                           <strong>Regulatory climate:</strong> {s.regRationale}

@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getUpcomingOpportunities } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
 import { enrichCompany } from "@/lib/enrich";
+import { draftGraph } from "@/lib/graph";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -96,6 +97,15 @@ export async function POST(
           { status: 422 },
         );
       }
+    }
+
+    // Draft the regulatory graph once (persisted with the company; reused on
+    // re-scores). Matching runs against the whole graph, not the description.
+    if (!working.graph) {
+      working = {
+        ...working,
+        graph: await draftGraph(working, { signal: ac.signal }),
+      };
     }
 
     const opportunities = await getUpcomingOpportunities();

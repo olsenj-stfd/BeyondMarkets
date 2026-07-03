@@ -1467,6 +1467,24 @@ details.more[open] summary::before {
   line-height: 1.5;
 }
 
+.graph-block {
+  border: 1px dashed var(--line);
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+}
+
+.graph-block summary {
+  cursor: pointer;
+  font-size: 13px;
+}
+
+.graph-lines {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
 .evidence-opps {
   list-style: none;
   display: flex;
