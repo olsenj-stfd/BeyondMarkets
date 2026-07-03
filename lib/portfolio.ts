@@ -7,6 +7,7 @@ import type {
   ScoredOpportunity,
 } from "@/lib/types";
 import { classify } from "@/lib/ingest/tag";
+import { expandTerms } from "@/lib/synonyms";
 
 /**
  * Score one portfolio company on the dimensions a VC cares about:
@@ -21,34 +22,103 @@ import { classify } from "@/lib/ingest/tag";
  */
 
 const MODEL = "claude-sonnet-4-6";
-const SHORTLIST = 40;
-const MAX_EVIDENCE = 8;
+const SHORTLIST = 60;
+const MAX_EVIDENCE = 10;
 
 /** Fold the structured fields into one text blob for classification + prompt. */
 function companyText(c: PortfolioCompany): string {
+  const g = c.graph;
   return [
     c.description.trim(),
     c.sector ? `Sector: ${c.sector}` : null,
     c.stage ? `Stage: ${c.stage}` : null,
     c.geography ? `Geography: ${c.geography}` : null,
+    g?.businessModel ? `Business model: ${g.businessModel}` : null,
+    g && g.valueChain.customers.length > 0
+      ? `Customers: ${g.valueChain.customers.join(", ")}`
+      : null,
+    g && g.valueChain.partners.length > 0
+      ? `Partners (money/rules reaching them reach us): ${g.valueChain.partners.join(", ")}`
+      : null,
+    g && g.valueChain.substitutes.length > 0
+      ? `Substitutes (subsidies to these reshape our market): ${g.valueChain.substitutes.join(", ")}`
+      : null,
+    g && g.valueChain.payersUpstream.length > 0
+      ? `Upstream payers: ${g.valueChain.payersUpstream.join(", ")}`
+      : null,
+    g && g.regulatoryRegimes.federal.length > 0
+      ? `Federal regimes: ${g.regulatoryRegimes.federal.join(", ")}`
+      : null,
+    g && g.regulatoryRegimes.state.length > 0
+      ? `State regimes: ${g.regulatoryRegimes.state.join(", ")}`
+      : null,
+    g && g.regulatoryRegimes.agencies.length > 0
+      ? `Key regulators: ${g.regulatoryRegimes.agencies.join(", ")}`
+      : null,
+    g && g.operatingStates.length > 0
+      ? `Operating states: ${g.operatingStates.join(", ")}`
+      : null,
   ]
     .filter(Boolean)
     .join("\n");
 }
 
-/** Cheap deterministic prefilter: domain/tag overlap, nearest-deadline first. */
-function prefilter(text: string, opportunities: Opportunity[]): Opportunity[] {
-  const { tags } = classify(text);
-  const upcoming = opportunities
-    .filter((o) => o.deadline)
-    .sort((a, b) => (a.deadline! < b.deadline! ? -1 : 1));
-  if (tags.length === 0) return upcoming.slice(0, SHORTLIST);
+/**
+ * Query terms spanning the WHOLE graph — company keywords plus every value-
+ * chain node and regime, expanded with regulator vocabulary. A grant to the
+ * company's partners or a rule governing its substitutes matches even when
+ * the company's own description never uses those words.
+ */
+function queryTerms(c: PortfolioCompany): string[] {
+  const g = c.graph;
+  const raw = [
+    ...(g?.keywordsExpanded ?? []),
+    ...(g?.valueChain.customers ?? []),
+    ...(g?.valueChain.partners ?? []),
+    ...(g?.valueChain.substitutes ?? []),
+    ...(g?.valueChain.payersUpstream ?? []),
+    ...(g?.regulatoryRegimes.federal ?? []),
+    ...(g?.regulatoryRegimes.state ?? []),
+    ...(g?.regulatoryRegimes.agencies ?? []),
+    ...(g?.sectors ?? []),
+    ...(c.sector ? [c.sector] : []),
+  ];
+  return expandTerms(raw).filter((t) => t.length >= 3);
+}
 
-  const set = new Set(tags);
-  const matched = upcoming.filter(
-    (o) => (o.domain && set.has(o.domain)) || o.tags.some((t) => set.has(t)),
-  );
-  return (matched.length > 0 ? matched : upcoming).slice(0, SHORTLIST);
+/**
+ * Deterministic prefilter over the temporally-relevant event set: score each
+ * event by graph-term hits in its text plus domain-tag overlap, keep the top
+ * SHORTLIST. Term hits outrank bare domain overlap so value-chain-specific
+ * items (e.g. a substitute program) beat generic same-domain noise.
+ */
+function prefilter(company: PortfolioCompany, events: Opportunity[]): Opportunity[] {
+  const { tags } = classify(companyText(company));
+  const tagSet = new Set(tags);
+  const terms = queryTerms(company);
+
+  const scored = events.map((o) => {
+    const text = `${o.title} ${o.summary ?? ""} ${o.agency ?? ""}`.toLowerCase();
+    let hits = 0;
+    for (const term of terms) {
+      if (text.includes(term)) hits += 1;
+    }
+    const domainHit =
+      (o.domain && tagSet.has(o.domain)) || o.tags.some((t) => tagSet.has(t));
+    return { o, score: hits * 3 + (domainHit ? 1 : 0) };
+  });
+
+  const nearestDate = (o: Opportunity) =>
+    o.deadline ?? o.effectiveDate ?? o.expirationDate ?? "9999";
+
+  return scored
+    .filter((s) => s.score > 0)
+    .sort(
+      (a, b) =>
+        b.score - a.score || nearestDate(a.o).localeCompare(nearestDate(b.o)),
+    )
+    .slice(0, SHORTLIST)
+    .map((s) => s.o);
 }
 
 const scoreTool: Anthropic.Tool = {
@@ -139,15 +209,19 @@ export async function scoreCompany(
   options?: { signal?: AbortSignal },
 ): Promise<CompanyScore> {
   const text = companyText(company);
-  const shortlist = prefilter(text, opportunities);
+  const shortlist = prefilter(company, opportunities);
 
   const compact = shortlist.map((o) => ({
     id: o.id,
-    type: o.type,
+    event: o.eventType ?? o.type,
     title: o.title,
     agency: o.agency,
     jurisdiction: o.jurisdiction,
     domain: o.domain,
+    deadline: o.deadline,
+    effectiveDate: o.effectiveDate,
+    expirationDate: o.expirationDate,
+    published: o.openDate,
     summary: o.summary?.slice(0, 300) ?? null,
   }));
 
@@ -202,6 +276,7 @@ export async function scoreCompany(
         id: o.id,
         title: o.title,
         type: o.type,
+        eventType: o.eventType,
         agency: o.agency,
         deadline: o.deadline,
         url: o.url,

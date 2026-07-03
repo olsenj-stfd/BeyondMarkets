@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
-import { getUpcomingOpportunities } from "@/lib/opportunities";
+import { getRelevantEvents } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
 import { enrichCompany } from "@/lib/enrich";
 import { draftGraph } from "@/lib/graph";
@@ -108,7 +108,7 @@ export async function POST(
       };
     }
 
-    const opportunities = await getUpcomingOpportunities();
+    const opportunities = await getRelevantEvents();
     const score = await scoreCompany(working, opportunities, {
       signal: ac.signal,
     });

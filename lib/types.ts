@@ -198,6 +198,7 @@ export interface ScoredOpportunity {
   id: string;
   title: string;
   type: OpportunityType;
+  eventType: EventType | null;
   agency: string | null;
   deadline: string | null;
   url: string;

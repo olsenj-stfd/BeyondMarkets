@@ -82,6 +82,45 @@ export async function getUpcomingOpportunities(limit = 200): Promise<Opportunity
 }
 
 /**
+ * Regulatory events relevant to portfolio scoring — NOT just what's open for
+ * application/comment right now. An item qualifies when any key date
+ * (deadline, effective date, expiration) falls within the lookahead window,
+ * or it was published/acted on within the lookback window (recently-final
+ * rules, enforcement actions, moving bills, intermediary signals).
+ * Falls back to the open-deadline set on an un-migrated database.
+ */
+export async function getRelevantEvents(limit = 600): Promise<Opportunity[]> {
+  if (!isSupabaseConfigured) return [];
+  const supabase = await createClient();
+  const today = new Date().toISOString().slice(0, 10);
+  const lookahead = new Date(Date.now() + 548 * 86_400_000) // ~18 months
+    .toISOString()
+    .slice(0, 10);
+  const lookback = new Date(Date.now() - 365 * 86_400_000) // 12 months
+    .toISOString()
+    .slice(0, 10);
+
+  const { data, error } = await supabase
+    .from("opportunities")
+    .select(SELECT_COLS_FULL)
+    .or(
+      [
+        `and(deadline.gte.${today},deadline.lte.${lookahead})`,
+        `and(effective_date.gte.${today},effective_date.lte.${lookahead})`,
+        `and(expiration_date.gte.${today},expiration_date.lte.${lookahead})`,
+        // Recently published/acted, undated items (final rules, enforcement,
+        // bills, signals) — dated items with a lapsed deadline stay excluded.
+        `and(open_date.gte.${lookback},deadline.is.null)`,
+      ].join(","),
+    )
+    .order("fetched_at", { ascending: false })
+    .limit(limit);
+
+  if (error) return getUpcomingOpportunities();
+  return ((data as unknown as OpportunityRowDb[]) ?? []).map(toOpportunity);
+}
+
+/**
  * Resolve a project's cached ranking into full opportunities. Joins the cached
  * [{id, relevance, whyRelevant}] to live, still-upcoming opportunities so
  * expired or removed items drop out automatically. Nearest deadline first.
