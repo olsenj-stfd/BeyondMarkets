@@ -1,10 +1,8 @@
 import { NextResponse } from "next/server";
-import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { getRelevantEvents } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
-import { enrichCompany } from "@/lib/enrich";
-import { draftGraph } from "@/lib/graph";
+import { anthropicErrorResponse } from "@/lib/anthropic-error";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -13,9 +11,11 @@ export const maxDuration = 60;
 const SCORE_TIMEOUT_MS = 52_000;
 
 /**
- * Score a single company in one of the user's portfolios and cache the result
- * on the portfolio row. One company per request keeps each call well under the
- * Vercel function cap; the client scores a portfolio company-by-company.
+ * Phase 2 of scoring: the synthesis call, cached on the portfolio row.
+ * Exactly ONE model call per invocation — enrichment + graph drafting happen
+ * in /prepare with their own function window. One company per request; the
+ * client walks the portfolio sequentially (concurrent scores would clobber
+ * each other's write of the companies array).
  */
 export async function POST(
   req: Request,
@@ -67,49 +67,20 @@ export async function POST(
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
   }
 
+  const working = companies[idx];
+  if (!working.description || working.description.trim().length < 10) {
+    return NextResponse.json(
+      {
+        error: `"${working.name}" has no profile yet — run prepare first (the board does this automatically).`,
+      },
+      { status: 409 },
+    );
+  }
+
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), SCORE_TIMEOUT_MS);
   try {
-    // Paste-a-list-of-names flow: web-enrich the profile before scoring. The
-    // enrichment also checks for an IPO/acquisition/shutdown. Companies that
-    // already have a description are scored as-is (no extra web call).
-    let working = companies[idx];
-    if (!working.description || working.description.trim().length < 10) {
-      const profile = await enrichCompany(working.name, working.website, {
-        signal: ac.signal,
-      });
-      working = {
-        ...working,
-        description: profile.description ?? working.description,
-        sector: working.sector ?? profile.sector,
-        stage: working.stage ?? profile.stage,
-        geography: working.geography ?? profile.geography,
-        website: working.website ?? profile.website,
-        exitType: profile.exitType,
-        exitNote: profile.exitNote,
-        profileSource: "web",
-      };
-      if (!working.description || working.description.trim().length < 10) {
-        return NextResponse.json(
-          {
-            error: `Couldn't find enough about "${working.name}" on the web. Add a short description and re-score.`,
-          },
-          { status: 422 },
-        );
-      }
-    }
-
-    // Draft the regulatory graph once (persisted with the company; reused on
-    // re-scores). Runs in parallel with the events fetch — both are on the
-    // critical path of every first score.
-    const [graph, opportunities] = await Promise.all([
-      working.graph
-        ? Promise.resolve(working.graph)
-        : draftGraph(working, { signal: ac.signal }),
-      getRelevantEvents(),
-    ]);
-    working = { ...working, graph };
-
+    const opportunities = await getRelevantEvents();
     const score = await scoreCompany(working, opportunities, {
       signal: ac.signal,
     });
@@ -132,20 +103,8 @@ export async function POST(
         { status: 504 },
       );
     }
-    if (err instanceof Anthropic.APIError) {
-      const status = err.status ?? 500;
-      const message =
-        status === 429
-          ? "Rate limited by the AI service. Wait a moment and try again."
-          : status === 401 || status === 403
-            ? "The AI service rejected the API key. Check ANTHROPIC_API_KEY."
-            : status === 400 && /credit|balance|billing|quota/i.test(err.message)
-              ? "The Anthropic account is out of credit. Add billing to continue."
-              : status === 529 || status === 503
-                ? "The AI service is temporarily overloaded. Please try again."
-                : `AI service error (${status}). Please try again.`;
-      return NextResponse.json({ error: message }, { status: 502 });
-    }
+    const mapped = anthropicErrorResponse(err);
+    if (mapped) return mapped;
     return NextResponse.json(
       { error: "Could not score this company. Please try again." },
       { status: 500 },

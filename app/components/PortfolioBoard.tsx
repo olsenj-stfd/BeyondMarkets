@@ -166,26 +166,35 @@ export default function PortfolioBoard({
     async (companyId: string): Promise<PortfolioCompany | null> => {
       setScoringId(companyId);
       try {
-        const res = await fetch(`/api/portfolios/${portfolioId}/score`, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ companyId }),
-        });
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok || !data.company) {
-          setErrors((e) => ({
-            ...e,
-            [companyId]: data.error ?? "Could not score this company.",
-          }));
-          return null;
+        // Phase 1: enrich + graph (own function window; fast no-op when the
+        // profile already exists). Phase 2: the synthesis call.
+        for (const phase of ["prepare", "score"] as const) {
+          const res = await fetch(`/api/portfolios/${portfolioId}/${phase}`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ companyId }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok || !data.company) {
+            setErrors((e) => ({
+              ...e,
+              [companyId]: data.error ?? "Could not score this company.",
+            }));
+            return null;
+          }
+          const updated = data.company as PortfolioCompany;
+          setCompanies((cs) =>
+            cs.map((c) => (c.id === companyId ? updated : c)),
+          );
+          if (phase === "score") {
+            setErrors((e) => {
+              const { [companyId]: _drop, ...rest } = e;
+              return rest;
+            });
+            return updated;
+          }
         }
-        setErrors((e) => {
-          const { [companyId]: _drop, ...rest } = e;
-          return rest;
-        });
-        const updated = data.company as PortfolioCompany;
-        setCompanies((cs) => cs.map((c) => (c.id === companyId ? updated : c)));
-        return updated;
+        return null;
       } catch {
         setErrors((e) => ({ ...e, [companyId]: "Network error." }));
         return null;
