@@ -118,7 +118,7 @@ const scoreTool: Anthropic.Tool = {
   },
 };
 
-const SYSTEM = `You assess a single portfolio company for a climate/impact VC. You are given the company profile and a shortlist of REAL, dated opportunities (federal/California grant deadlines and regulatory comment periods).
+const SYSTEM = `You assess a single portfolio company for a mission-driven VC. You are given the company profile and a shortlist of REAL, dated opportunities (federal/California grant deadlines and open regulatory comment periods).
 
 Score it on:
 - nonDilutive (0-100): how much accessible non-dilutive capital / program fit is within reach, judged from the breadth and fit of the selected GRANT opportunities. Few or weak fits → low.
@@ -127,8 +127,10 @@ Score it on:
 
 Rules:
 - Only select opportunities from the provided shortlist; never invent opportunities, ids, or dates.
+- Select BOTH kinds when relevant: grant deadlines (funding) AND open comment periods (rulemakings the company should weigh in on to shape rules that affect it). A relevant rulemaking is worth selecting even when no grant fits.
+- The "summary" must be informative on its own, never a verdict about the shortlist. Do NOT write things like "weak fit with the available shortlist". Instead say what IS and ISN'T there and what it means, e.g. "No open federal/CA grants currently target X; the closest is Y. Two EPA rulemakings on Z are open for comment and would affect their permitting." If nothing matched, say plainly that no currently-open programs in the federal/California feeds match this company's work — which reflects what is open right now, not the company's quality.
 - The qualitative scores are your assessment — be calibrated and specific, not generic.
-- "whyRelevant", rationales, and dependencies must be concrete and specific to THIS company.
+- "whyRelevant", rationales, and dependencies must be concrete and specific to THIS company. For comment periods, "whyRelevant" should say what the company would want the rule to say.
 - Do not restate or alter dates; the user sees real deadlines from the source records.`;
 
 export async function scoreCompany(

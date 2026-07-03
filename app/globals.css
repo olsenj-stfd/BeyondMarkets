@@ -1570,15 +1570,16 @@ details.more[open] summary::before {
   color: var(--text-secondary);
 }
 
-/* Policy risk: high is bad (red), low is fine */
+/* Policy dependency: descriptive, not a verdict — amber flags "watch this",
+   never red/green judgment colors. */
 .risk-high {
-  color: #b91c1c;
-}
-.risk-medium {
   color: #a16207;
 }
+.risk-medium {
+  color: var(--text-primary);
+}
 .risk-low {
-  color: #15803d;
+  color: var(--text-secondary);
 }
 
 /* Methodology / how-to-read explainer */

@@ -52,18 +52,19 @@ const EXIT_LABEL: Record<string, string> = {
 type Band = "High" | "Medium" | "Low";
 
 // Repeal-prone flagship programs: a single dependency on one of these is enough
-// to flag high policy risk (they swing with each administration / budget).
+// to flag high policy dependency (they swing with each administration / budget).
 const FLAGSHIP_DEPENDENCY =
   /45x|45v|45q|45y|48e|\bitc\b|\bptc\b|lcfs|\bira\b|inflation reduction|340b|medicaid|medicare/i;
 
 /**
- * Policy risk — grounded in the specific subsidy/policy dependencies the model
- * named, not an opaque number:
+ * Policy dependency — a descriptive read (not a judgment: a VC may knowingly
+ * hold subsidy-dependent positions) grounded in the specific programs the
+ * research named:
  *   High   = depends on a flagship repeal-prone program, or on 2+ programs
  *   Medium = depends on exactly one (non-flagship) program
  *   Low    = no specific policy dependency identified
  */
-function policyBand(dependencies: string[]): Band {
+function dependencyBand(dependencies: string[]): Band {
   const deps = dependencies.filter((d) => d && d.trim());
   if (deps.length === 0) return "Low";
   if (deps.length >= 2 || deps.some((d) => FLAGSHIP_DEPENDENCY.test(d))) {
@@ -178,17 +179,21 @@ export default function PortfolioBoard({
     },
     { tailwind: 0, neutral: 0, headwind: 0 } as Record<RegClimate, number>,
   );
-  const highRisk = scored.filter(
-    (c) => policyBand(c.score?.dependencies ?? []) === "High",
+  const highDependency = scored.filter(
+    (c) => dependencyBand(c.score?.dependencies ?? []) === "High",
   );
 
-  // Cross-portfolio "act this quarter": real dated items in the next 90 days,
-  // with the SAME program rolled up into one action listing every affected
-  // company (so a shared grant deadline appears once, not per portco).
+  // Cross-portfolio "act this quarter": real dated items due 30–100 days out
+  // (nothing sooner — too late to mount an application — and nothing further
+  // than ~a quarter away), with the SAME program rolled up into one action
+  // listing every affected company (so a shared grant deadline appears once,
+  // not per portco).
+  const earliest = new Date();
+  earliest.setDate(earliest.getDate() + 30);
+  const earliestIso = earliest.toISOString().slice(0, 10);
   const horizon = new Date();
-  horizon.setDate(horizon.getDate() + 90);
+  horizon.setDate(horizon.getDate() + 100);
   const horizonIso = horizon.toISOString().slice(0, 10);
-  const todayIso = new Date().toISOString().slice(0, 10);
   // Fuzzy-cluster the same program across companies: merge on identical id or
   // URL, or on a matching deadline + similar title (so duplicate records of one
   // program from different sources collapse into a single action).
@@ -200,7 +205,7 @@ export default function PortfolioBoard({
   const clusters: Cluster[] = [];
   for (const c of scored) {
     for (const o of c.score?.opportunities ?? []) {
-      if (!o.deadline || o.deadline < todayIso || o.deadline > horizonIso) continue;
+      if (!o.deadline || o.deadline < earliestIso || o.deadline > horizonIso) continue;
       const tokens = titleTokens(o.title);
       const match = clusters.find(
         (cl) =>
@@ -230,8 +235,9 @@ export default function PortfolioBoard({
         <p className="intro-text">
           {scored.length} of {companies.length} companies scored
           {isBusy ? " · scoring…" : ""}. Non-dilutive and action items are real,
-          dated programs; regulatory climate and policy risk are model
-          assessments — expand any company to see the evidence.
+          dated programs; regulatory climate and policy dependency come from
+          the research — open a company&apos;s program analysis for the
+          reasoning.
         </p>
         <button
           type="button"
@@ -263,9 +269,11 @@ export default function PortfolioBoard({
             </li>
           </ul>
           <p>
-            <strong>Policy risk</strong> — how dependent the company&apos;s thesis
-            is on a subsidy or policy that could be repealed, from the specific
-            programs the research names:
+            <strong>Policy dependency</strong> — how much the company&apos;s
+            thesis relies on specific subsidies or policies, from the programs
+            the research names. This is descriptive, not a verdict — many strong
+            theses are deliberately policy-driven; the point is to know which
+            programs to watch:
           </p>
           <ul>
             <li>
@@ -298,8 +306,9 @@ export default function PortfolioBoard({
           </ul>
           <p className="muted">
             Grant programs and deadlines are real, dated records from official
-            sources. Policy risk and regulatory climate are Claude&apos;s
-            assessments — expand a company to see the reasoning and evidence.
+            sources. The named dependencies and regulatory climate come from
+            Claude&apos;s research — open a company&apos;s program analysis to
+            see the reasoning and sources.
           </p>
         </div>
       </details>
@@ -332,10 +341,11 @@ export default function PortfolioBoard({
             </div>
           </div>
           <div className="glass-card stat">
-            <span className="stat-label">High policy risk</span>
-            <span className="stat-value">{highRisk.length}</span>
+            <span className="stat-label">Policy dependency</span>
+            <span className="stat-value">{highDependency.length}</span>
             <span className="stat-sub">
-              {highRisk.length === 1 ? "company" : "companies"} subsidy-dependent
+              {highDependency.length === 1 ? "company" : "companies"} with a
+              subsidy-dependent thesis
             </span>
           </div>
         </section>
@@ -344,7 +354,10 @@ export default function PortfolioBoard({
       {actions.length > 0 && (
         <section className="glass-card act-quarter">
           <h3 className="section-title">Act this quarter</h3>
-          <p className="muted">Real deadlines in the next 90 days across the book.</p>
+          <p className="muted">
+            Real deadlines across the book, due 30–100 days out — far enough to
+            mount an application, close enough to act now.
+          </p>
           <ul className="act-list">
             {actions.map(({ opp, companies: affected }) => (
               <li key={opp.id} className="act-item">
@@ -457,17 +470,33 @@ export default function PortfolioBoard({
                     </div>
                     <div className="score-metric">
                       <span
-                        className={`score-band risk-${policyBand(
+                        className={`score-band risk-${dependencyBand(
                           s.dependencies,
                         ).toLowerCase()}`}
                       >
-                        {policyBand(s.dependencies)}
+                        {dependencyBand(s.dependencies)}
                       </span>
-                      <span className="score-cap">Policy risk</span>
+                      <span className="score-cap">Policy dependency</span>
                     </div>
                     <div className="score-metric">
-                      <span className="score-num">{s.opportunities.length}</span>
-                      <span className="score-cap">Programs in reach</span>
+                      <span className="score-num">
+                        {
+                          s.opportunities.filter(
+                            (o) => o.type === "grant_deadline",
+                          ).length
+                        }
+                      </span>
+                      <span className="score-cap">Open grants</span>
+                    </div>
+                    <div className="score-metric">
+                      <span className="score-num">
+                        {
+                          s.opportunities.filter(
+                            (o) => o.type === "comment_period",
+                          ).length
+                        }
+                      </span>
+                      <span className="score-cap">Open rulemakings</span>
                     </div>
                   </div>
 
@@ -478,7 +507,7 @@ export default function PortfolioBoard({
                       setExpanded((e) => ({ ...e, [c.id]: !e[c.id] }))
                     }
                   >
-                    {open ? "Hide evidence ▲" : "Show evidence ▼"}
+                    {open ? "Program analysis ▲" : "Program analysis ▼"}
                   </button>
 
                   {open && (
@@ -490,7 +519,7 @@ export default function PortfolioBoard({
                       )}
                       {s.policyRationale && (
                         <p className="evidence-line">
-                          <strong>Policy risk:</strong> {s.policyRationale}
+                          <strong>Policy dependency:</strong> {s.policyRationale}
                         </p>
                       )}
                       {s.dependencies.length > 0 && (
@@ -499,33 +528,56 @@ export default function PortfolioBoard({
                           {s.dependencies.join(", ")}
                         </p>
                       )}
-                      {s.opportunities.length > 0 ? (
-                        <ul className="evidence-opps">
-                          {s.opportunities.map((o) => (
-                            <li key={o.id}>
-                              <a
-                                href={o.url}
-                                target="_blank"
-                                rel="noopener noreferrer"
-                              >
-                                {o.title}
-                              </a>
-                              <span className="act-meta">
-                                {o.type === "grant_deadline"
-                                  ? "Grant"
-                                  : "Comment period"}
-                                {fmtDate(o.deadline)
-                                  ? ` · due ${fmtDate(o.deadline)}`
-                                  : ""}
-                                {o.agency ? ` · ${o.agency}` : ""}
-                              </span>
-                              <span className="evidence-why">{o.whyRelevant}</span>
-                            </li>
-                          ))}
-                        </ul>
-                      ) : (
+                      {(["grant_deadline", "comment_period"] as const).map(
+                        (kind) => {
+                          const items = s.opportunities.filter(
+                            (o) => o.type === kind,
+                          );
+                          if (items.length === 0) return null;
+                          return (
+                            <div key={kind}>
+                              <p className="evidence-line">
+                                <strong>
+                                  {kind === "grant_deadline"
+                                    ? "Open grants"
+                                    : "Rulemakings open for comment"}
+                                </strong>
+                              </p>
+                              <ul className="evidence-opps">
+                                {items.map((o) => (
+                                  <li key={o.id}>
+                                    <a
+                                      href={o.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                    >
+                                      {o.title}
+                                    </a>
+                                    <span className="act-meta">
+                                      {fmtDate(o.deadline)
+                                        ? `Due ${fmtDate(o.deadline)}`
+                                        : ""}
+                                      {o.agency ? ` · ${o.agency}` : ""}
+                                    </span>
+                                    <span className="evidence-why">
+                                      {o.whyRelevant}
+                                    </span>
+                                  </li>
+                                ))}
+                              </ul>
+                            </div>
+                          );
+                        },
+                      )}
+                      {s.opportunities.length === 0 && (
                         <p className="muted">
-                          No dated programs matched in the current set.
+                          No currently-open grants or comment periods in our
+                          federal + California feeds matched this company. That
+                          reflects what&apos;s open right now in the sources we
+                          track (Grants.gov, CA Grants Portal, Federal Register,
+                          Regulations.gov) — not necessarily that no programs
+                          exist. New opportunities are ingested daily; re-score
+                          to refresh.
                         </p>
                       )}
                     </div>
