@@ -79,29 +79,68 @@ export interface LiveRegResult {
   publicationDate: string | null;
 }
 
-export type OpportunitySource =
-  | "federal_register"
-  | "regulations_gov"
-  | "grants_gov"
-  | "ca_grants";
+/**
+ * Where an item came from. Registry-driven sources (RSS feeds, newsrooms,
+ * state regulators) use their registry name, so this is an open string with
+ * the four legacy API sources as well-known values.
+ */
+export type OpportunitySource = string;
 
-export type OpportunityType = "comment_period" | "grant_deadline";
+/**
+ * Legacy coarse kind (drives the deadlines dashboard). "signal" covers
+ * registry items that aren't a dated application/comment window (newsroom
+ * announcements, enforcement actions, intermediary analysis).
+ */
+export type OpportunityType = "comment_period" | "grant_deadline" | "signal";
 
-/** A dated, real-source item ingested from a public API. */
+/**
+ * Typed regulatory-event taxonomy. Each type implies its own relevance
+ * window — e.g. a final rule with a future effective date matters even though
+ * nothing is "open", and an expiring temporary rule forces rulemaking.
+ */
+export type EventType =
+  | "grant_open"
+  | "grant_forecasted"
+  | "grant_recurring"
+  | "foundation_grant"
+  | "nprm_open_comment"
+  | "rule_final_pending_effective"
+  | "rule_effective_recent"
+  | "rule_temporary_expiring"
+  | "unified_agenda_planned"
+  | "negotiated_rulemaking"
+  | "guidance_document"
+  | "bill_introduced"
+  | "bill_committee_passed"
+  | "bill_chamber_passed"
+  | "law_enacted_implementing"
+  | "enforcement_action"
+  | "state_implementation_window"
+  | "appropriations_event"
+  | "agency_announcement"
+  | "intermediary_signal";
+
+/** A real-source regulatory/funding event ingested from a public source. */
 export interface Opportunity {
   id: string;
   source: OpportunitySource;
   sourceId: string;
   type: OpportunityType;
+  /** Typed taxonomy; null on rows ingested before the taxonomy migration. */
+  eventType: EventType | null;
   title: string;
   agency: string | null;
-  jurisdiction: "federal" | "california";
+  jurisdiction: string;
   domain: string | null;
   tags: string[];
   summary: string | null;
   url: string;
   openDate: string | null;
   deadline: string | null;
+  /** Final rules: when the rule takes (or took) effect. */
+  effectiveDate: string | null;
+  /** Temporary rules / windows: when the authority or window lapses. */
+  expirationDate: string | null;
   status: string | null;
 }
 
@@ -116,15 +155,18 @@ export interface OpportunityRow {
   source: OpportunitySource;
   source_id: string;
   type: OpportunityType;
+  event_type: EventType | null;
   title: string;
   agency: string | null;
-  jurisdiction: "federal" | "california";
+  jurisdiction: string;
   domain: string | null;
   tags: string[];
   summary: string | null;
   url: string;
   open_date: string | null;
   deadline: string | null;
+  effective_date: string | null;
+  expiration_date: string | null;
   status: string | null;
   raw: unknown;
 }

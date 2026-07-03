@@ -193,3 +193,128 @@ create policy "own portfolios: update" on public.portfolios
 drop policy if exists "own portfolios: delete" on public.portfolios;
 create policy "own portfolios: delete" on public.portfolios
   for delete using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
+-- Event taxonomy: opportunities gain a typed event classification and the key
+-- dates that make non-open items relevant (a final rule's effective date, a
+-- temporary rule's expiration). Existing rows are backfilled from `type`.
+-- ---------------------------------------------------------------------------
+
+alter table public.opportunities
+  add column if not exists event_type text;
+alter table public.opportunities
+  add column if not exists effective_date date;
+alter table public.opportunities
+  add column if not exists expiration_date date;
+
+update public.opportunities
+  set event_type = case type
+    when 'comment_period' then 'nprm_open_comment'
+    when 'grant_deadline' then 'grant_open'
+  end
+  where event_type is null;
+
+create index if not exists opportunities_event_type_idx
+  on public.opportunities (event_type);
+create index if not exists opportunities_effective_date_idx
+  on public.opportunities (effective_date);
+
+-- ---------------------------------------------------------------------------
+-- Source registry: data-driven list of everything the ingest cron scans, so
+-- sources can be added per sector/state without code changes. `fetch_method`
+-- selects the adapter: 'api' (named built-in), 'rss' (generic feed reader),
+-- 'scrape' (not yet implemented), 'manual' (tracked but not auto-ingested).
+-- Rows seeded inactive are deliberate deferrals — see `notes`.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.sources (
+  id uuid primary key default gen_random_uuid(),
+  name text not null unique,
+  url text not null,
+  -- primary_federal | agency_newsroom | state | intermediary
+  source_type text not null,
+  jurisdiction text not null default 'federal',
+  tier smallint not null default 1,
+  -- daily | weekly | monthly
+  crawl_cadence text not null default 'weekly',
+  sectors text[] not null default '{}',
+  -- api | rss | scrape | manual
+  fetch_method text not null,
+  -- named built-in adapter for fetch_method='api'
+  adapter text,
+  config jsonb not null default '{}'::jsonb,
+  active boolean not null default true,
+  last_fetched_at timestamptz,
+  last_status text,
+  notes text
+);
+
+alter table public.sources enable row level security;
+
+drop policy if exists "sources: public read" on public.sources;
+create policy "sources: public read" on public.sources
+  for select using (true);
+
+-- Seed the registry (no-ops on names that already exist, so it's re-runnable
+-- and manual edits to existing rows are preserved).
+insert into public.sources
+  (name, url, source_type, jurisdiction, tier, crawl_cadence, sectors, fetch_method, adapter, active, notes)
+values
+  -- Tier 1: federal primary APIs
+  ('grants_gov', 'https://api.grants.gov/v1/api/search2', 'primary_federal', 'federal', 1, 'daily', '{}', 'api', 'grants_gov', true, 'Posted NOFOs with close dates.'),
+  ('grants_gov_forecasted', 'https://api.grants.gov/v1/api/search2', 'primary_federal', 'federal', 1, 'weekly', '{}', 'api', 'grants_gov_forecasted', true, 'Forecasted NOFOs (no close date yet).'),
+  ('federal_register', 'https://www.federalregister.gov/api/v1/documents.json', 'primary_federal', 'federal', 1, 'daily', '{}', 'api', 'federal_register', true, 'Proposed rules with open comment periods.'),
+  ('federal_register_final', 'https://www.federalregister.gov/api/v1/documents.json', 'primary_federal', 'federal', 1, 'daily', '{}', 'api', 'federal_register_final', true, 'Final rules pending a future effective date + recently effective.'),
+  ('regulations_gov', 'https://api.regulations.gov/v4/documents', 'primary_federal', 'federal', 1, 'daily', '{}', 'api', 'regulations_gov', true, 'Needs REGULATIONS_GOV_API_KEY.'),
+  ('congress_gov', 'https://api.congress.gov/v3/bill', 'primary_federal', 'federal', 1, 'weekly', '{}', 'api', 'congress_gov', true, 'Recently-acted bills. Needs CONGRESS_GOV_API_KEY (free at api.congress.gov/sign-up); adapter no-ops without it.'),
+  ('ca_grants', 'https://data.ca.gov/api/3/action/datastore_search', 'state', 'california', 1, 'daily', '{}', 'api', 'ca_grants', true, 'CA Grants Portal, active grants.'),
+  ('unified_agenda', 'https://www.reginfo.gov', 'primary_federal', 'federal', 1, 'monthly', '{}', 'manual', null, false, 'DEFERRED: no clean API; bulk XML per season. Early-warning layer for planned rulemakings by RIN.'),
+  ('usaspending', 'https://api.usaspending.gov', 'primary_federal', 'federal', 1, 'monthly', '{}', 'api', null, false, 'DEFERRED: award-flow data needs a scoring-integration design (who is winning money per sector).'),
+  ('govinfo', 'https://api.govinfo.gov', 'primary_federal', 'federal', 1, 'monthly', '{}', 'api', null, false, 'DEFERRED: overlaps Federal Register + Congress.gov for our use.'),
+  ('govtrack', 'https://www.govtrack.us', 'primary_federal', 'federal', 1, 'weekly', '{}', 'manual', null, false, 'GovTrack public API discontinued; Congress.gov covers bill status.'),
+  -- Tier 1: agency newsrooms (verified RSS)
+  ('dol_releases', 'https://www.dol.gov/rss/releases.xml', 'agency_newsroom', 'federal', 1, 'weekly', '{workforce}', 'rss', null, true, 'DOL press incl. ETA funding announcements.'),
+  ('cfpb_newsroom', 'https://www.consumerfinance.gov/about-us/newsroom/feed/', 'agency_newsroom', 'federal', 1, 'weekly', '{consumer_finance}', 'rss', null, true, 'Enforcement + supervision signals for lenders.'),
+  ('ftc_press', 'https://www.ftc.gov/feeds/press-release.xml', 'agency_newsroom', 'federal', 1, 'weekly', '{consumer_finance,economic_development}', 'rss', null, true, null),
+  ('sec_press', 'https://www.sec.gov/news/pressreleases.rss', 'agency_newsroom', 'federal', 1, 'weekly', '{consumer_finance}', 'rss', null, true, null),
+  -- Tier 1: agency newsrooms (no working feed found — deferred to scrape)
+  ('hhs_press', 'https://www.hhs.gov/press-room', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare}', 'scrape', null, false, 'RSS 403s (bot-blocked); needs scrape adapter.'),
+  ('samhsa_grants', 'https://www.samhsa.gov/grants', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare}', 'scrape', null, false, 'Dashboard page; needs scrape adapter.'),
+  ('ed_press', 'https://www.ed.gov/about/news', 'agency_newsroom', 'federal', 1, 'weekly', '{education,workforce}', 'scrape', null, false, 'No working RSS found; needs scrape adapter.'),
+  ('fsa_announcements', 'https://fsapartners.ed.gov/knowledge-center', 'agency_newsroom', 'federal', 1, 'weekly', '{education}', 'scrape', null, false, 'Dear Colleague letters / electronic announcements; needs scrape adapter.'),
+  ('apprenticeship_gov', 'https://www.apprenticeship.gov/investments-tax-credits-and-tuition-support/open-funding-opportunities', 'agency_newsroom', 'federal', 1, 'weekly', '{workforce}', 'scrape', null, false, 'Open funding table; needs scrape adapter.'),
+  ('hrsa_funding', 'https://www.hrsa.gov/grants/find-funding', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare}', 'scrape', null, false, 'JS-rendered app; needs scrape/API investigation.'),
+  ('cdc_funding', 'https://www.cdc.gov/funding', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare}', 'scrape', null, false, 'Needs scrape adapter.'),
+  ('doj_ojp_funding', 'https://www.ojp.gov/funding/explore/current-funding-opportunities', 'agency_newsroom', 'federal', 1, 'weekly', '{economic_development}', 'scrape', null, false, 'DOJ grants do NOT flow through Grants.gov; needs scrape adapter.'),
+  ('cms_newsroom', 'https://www.cms.gov/newsroom', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare}', 'scrape', null, false, 'No working RSS found; waivers + state plan amendments.'),
+  ('acf_press', 'https://acf.gov/media/press-releases', 'agency_newsroom', 'federal', 1, 'weekly', '{healthcare,workforce}', 'scrape', null, false, 'No working RSS found.'),
+  ('dea_diversion', 'https://www.deadiversion.usdoj.gov', 'agency_newsroom', 'federal', 1, 'monthly', '{healthcare}', 'scrape', null, false, 'Telemedicine flexibility expirations force rulemaking.'),
+  -- Tier 2: state (California first; verified RSS)
+  ('ca_dfpi', 'https://dfpi.ca.gov/feed/', 'state', 'california', 2, 'weekly', '{consumer_finance}', 'rss', null, true, 'CA DFPI rulemaking/enforcement/licensing.'),
+  ('ca_ag_news', 'https://oag.ca.gov/news/feed', 'state', 'california', 2, 'weekly', '{}', 'rss', null, true, 'CA AG press — enforcement early warning.'),
+  ('ca_bppe', 'https://www.bppe.ca.gov', 'state', 'california', 2, 'monthly', '{education}', 'scrape', null, false, 'Private postsecondary regulation; needs scrape adapter.'),
+  ('ca_workforce_boards', 'https://cwdb.ca.gov', 'state', 'california', 2, 'monthly', '{workforce,education}', 'scrape', null, false, 'CWDB + CCCCO Workforce Pell implementation; needs scrape adapter.'),
+  ('ca_dhcs', 'https://www.dhcs.ca.gov', 'state', 'california', 2, 'monthly', '{healthcare}', 'scrape', null, false, 'Needs scrape adapter.'),
+  ('ca_leginfo', 'https://leginfo.legislature.ca.gov', 'state', 'california', 2, 'weekly', '{}', 'manual', null, false, 'CA bill tracking; no stable public API — needs design.'),
+  ('state_workforce_pell_registry', 'https://www.pa.gov', 'state', 'multi-state', 2, 'monthly', '{education,workforce}', 'manual', null, false, 'Per-state Workforce Pell approval windows (PA, WA wtb.wa.gov publish); build registry keyed by state.'),
+  ('opioid_settlement_tracker', 'https://www.opioidsettlementtracker.com', 'state', 'multi-state', 2, 'monthly', '{healthcare}', 'scrape', null, false, 'Settlement fund allocation cycles.'),
+  ('nmls_state_regulators', 'https://nationwidelicensingsystem.org', 'state', 'multi-state', 2, 'monthly', '{consumer_finance}', 'manual', null, false, 'State banking/finance regulators for lending companies.'),
+  -- Tier 3: intermediaries and trackers (verified RSS)
+  ('consumer_finance_monitor', 'https://www.consumerfinancemonitor.com/feed/', 'intermediary', 'federal', 3, 'weekly', '{consumer_finance}', 'rss', null, true, 'Ballard Spahr tracker — regime-shift signals for lending.'),
+  ('higher_ed_dive', 'https://www.highereddive.com/feeds/news/', 'intermediary', 'federal', 3, 'weekly', '{education,workforce}', 'rss', null, true, null),
+  ('inside_higher_ed', 'https://www.insidehighered.com/rss.xml', 'intermediary', 'federal', 3, 'weekly', '{education}', 'rss', null, true, null),
+  ('nashp', 'https://nashp.org/feed/', 'intermediary', 'multi-state', 3, 'weekly', '{healthcare}', 'rss', null, true, 'State health policy incl. settlement resources.'),
+  -- Tier 3: no working feed found (deferred) or paid (needs decision)
+  ('new_america_edu', 'https://www.newamerica.org/education-policy/', 'intermediary', 'federal', 3, 'monthly', '{education,workforce}', 'scrape', null, false, 'No working RSS found.'),
+  ('jff', 'https://www.jff.org', 'intermediary', 'federal', 3, 'monthly', '{workforce}', 'scrape', null, false, '/feed serves HTML; needs scrape adapter.'),
+  ('national_skills_coalition', 'https://nationalskillscoalition.org', 'intermediary', 'federal', 3, 'monthly', '{workforce}', 'scrape', null, false, null),
+  ('nasfaa', 'https://www.nasfaa.org/news', 'intermediary', 'federal', 3, 'monthly', '{education}', 'scrape', null, false, null),
+  ('community_college_daily', 'https://www.ccdaily.com', 'intermediary', 'federal', 3, 'monthly', '{education,workforce}', 'scrape', null, false, null),
+  ('kff', 'https://www.kff.org', 'intermediary', 'federal', 3, 'monthly', '{healthcare}', 'scrape', null, false, 'KFF trackers.'),
+  ('national_council_wellbeing', 'https://www.thenationalcouncil.org', 'intermediary', 'federal', 3, 'monthly', '{healthcare}', 'scrape', null, false, null),
+  ('georgetown_ccf', 'https://ccf.georgetown.edu', 'intermediary', 'federal', 3, 'monthly', '{healthcare}', 'scrape', null, false, null),
+  ('naco', 'https://www.naco.org', 'intermediary', 'multi-state', 3, 'monthly', '{healthcare,workforce}', 'scrape', null, false, 'Opioid Solutions Center + workforce briefs.'),
+  ('jd_supra_consumer_finance', 'https://www.jdsupra.com', 'intermediary', 'federal', 3, 'weekly', '{consumer_finance}', 'scrape', null, false, 'Topic feeds need account/URL investigation.'),
+  ('instrumentl', 'https://www.instrumentl.com', 'intermediary', 'federal', 3, 'weekly', '{}', 'api', null, false, 'PAID — needs budget decision. Private foundation grants.'),
+  ('candid', 'https://candid.org', 'intermediary', 'federal', 3, 'weekly', '{}', 'api', null, false, 'PAID — needs budget decision. Foundation Directory.')
+on conflict (name) do nothing;

@@ -5,14 +5,30 @@ import type { Opportunity, RankedOpportunity } from "@/lib/types";
 const TYPE_LABEL: Record<Opportunity["type"], string> = {
   grant_deadline: "Grant deadline",
   comment_period: "Comment period",
+  signal: "Signal",
 };
 
-const SOURCE_LABEL: Record<Opportunity["source"], string> = {
+// Well-known API sources get friendly labels; registry sources (RSS feeds
+// etc.) fall back to a cleaned-up version of their registry name.
+const SOURCE_LABEL: Record<string, string> = {
   federal_register: "Federal Register",
+  federal_register_final: "Federal Register",
   regulations_gov: "Regulations.gov",
   grants_gov: "Grants.gov",
+  grants_gov_forecasted: "Grants.gov (forecasted)",
+  congress_gov: "Congress.gov",
   ca_grants: "CA Grants Portal",
 };
+
+function sourceLabel(source: string): string {
+  return SOURCE_LABEL[source] ?? source.replace(/_/g, " ");
+}
+
+function jurisdictionLabel(j: string): string {
+  if (j === "federal") return "Federal";
+  if (j === "california") return "California";
+  return j.replace(/\b\w/g, (c) => c.toUpperCase()).replace(/-/g, " ");
+}
 
 export function daysUntil(iso: string): number {
   const today = new Date();
@@ -60,7 +76,7 @@ export default function OpportunityCard({
       <div className="opp-body">
         <div className="opp-badges">
           <span className={`opp-badge ${o.jurisdiction}`}>
-            {o.jurisdiction === "federal" ? "Federal" : "California"}
+            {jurisdictionLabel(o.jurisdiction)}
           </span>
           <span className="opp-badge type">{TYPE_LABEL[o.type]}</span>
           {o.domain && <span className="opp-badge domain">{o.domain}</span>}
@@ -73,7 +89,7 @@ export default function OpportunityCard({
         </a>
         {o.agency && <p className="opp-agency">{o.agency}</p>}
         {why && <p className="opp-why">{why}</p>}
-        <span className="opp-source">{SOURCE_LABEL[o.source]}</span>
+        <span className="opp-source">{sourceLabel(o.source)}</span>
       </div>
       {canStar && (
         <button

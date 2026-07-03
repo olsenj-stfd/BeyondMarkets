@@ -89,6 +89,7 @@ export async function fetchFederalRegister(): Promise<OpportunityRow[]> {
       source: "federal_register",
       source_id: d.document_number,
       type: "comment_period",
+      event_type: "nprm_open_comment",
       title: d.title,
       agency,
       jurisdiction: "federal",
@@ -98,6 +99,8 @@ export async function fetchFederalRegister(): Promise<OpportunityRow[]> {
       url: d.html_url,
       open_date: toIsoDate(d.publication_date),
       deadline: toIsoDate(d.comments_close_on),
+      effective_date: null,
+      expiration_date: null,
       status: "comment_open",
       raw: d,
     });
@@ -175,6 +178,7 @@ export async function fetchRegulationsGov(): Promise<OpportunityRow[]> {
           source: "regulations_gov",
           source_id: d.id,
           type: "comment_period",
+          event_type: "nprm_open_comment",
           title: a.title,
           agency: a.agencyId,
           jurisdiction: "federal",
@@ -184,6 +188,8 @@ export async function fetchRegulationsGov(): Promise<OpportunityRow[]> {
           url: `https://www.regulations.gov/document/${d.id}`,
           open_date: toIsoDate(a.postedDate),
           deadline,
+          effective_date: null,
+          expiration_date: null,
           status: "comment_open",
           raw: d,
         });
@@ -263,6 +269,7 @@ export async function fetchGrantsGov(): Promise<OpportunityRow[]> {
         source: "grants_gov",
         source_id: h.id,
         type: "grant_deadline",
+        event_type: "grant_open",
         title: h.title,
         agency: h.agency ?? null,
         jurisdiction: "federal",
@@ -272,6 +279,8 @@ export async function fetchGrantsGov(): Promise<OpportunityRow[]> {
         url: `https://www.grants.gov/search-results-detail/${h.id}`,
         open_date: fromUsDate(h.openDate),
         deadline,
+        effective_date: null,
+        expiration_date: null,
         status: h.oppStatus ?? null,
         raw: h,
       });
@@ -300,6 +309,228 @@ interface CaGrant {
   GrantURL: string | null;
 }
 
+// ──────────────────── Federal Register: final rules ────────────────────
+// Final rules pending a future effective date are often the highest-signal
+// items for a portfolio company (a market reshapes on the effective date, not
+// the comment deadline), plus rules that took effect in the last 12 months.
+
+interface FrFinalDoc extends FrDoc {
+  effective_on: string | null;
+}
+
+async function fetchFrRules(params: URLSearchParams): Promise<FrFinalDoc[]> {
+  params.set("per_page", "200");
+  params.set("order", "newest");
+  params.append("conditions[type][]", "RULE");
+  for (const f of [
+    "title",
+    "document_number",
+    "html_url",
+    "publication_date",
+    "effective_on",
+    "comments_close_on",
+    "abstract",
+    "agencies",
+  ]) {
+    params.append("fields[]", f);
+  }
+  const data = await getJson(
+    `https://www.federalregister.gov/api/v1/documents.json?${params}`,
+  );
+  return data?.results ?? [];
+}
+
+export async function fetchFederalRegisterFinal(): Promise<OpportunityRow[]> {
+  const today = todayIso();
+  const yearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 10);
+
+  // Pending: effective date still in the future.
+  const pendingParams = new URLSearchParams();
+  pendingParams.set("conditions[effective_date][gte]", today);
+  // Recent: published in the last 12 months (effective date may have passed).
+  const recentParams = new URLSearchParams();
+  recentParams.set("conditions[publication_date][gte]", yearAgo);
+  recentParams.set("conditions[effective_date][lte]", today);
+
+  const [pending, recent] = await Promise.all([
+    fetchFrRules(pendingParams).catch(() => [] as FrFinalDoc[]),
+    fetchFrRules(recentParams).catch(() => [] as FrFinalDoc[]),
+  ]);
+
+  const rows: OpportunityRow[] = [];
+  const seen = new Set<string>();
+  for (const [docs, eventType] of [
+    [pending, "rule_final_pending_effective"],
+    [recent, "rule_effective_recent"],
+  ] as const) {
+    for (const d of docs) {
+      if (seen.has(d.document_number)) continue;
+      const text = `${d.title} ${d.abstract ?? ""}`;
+      const { domain, tags } = classify(text);
+      if (!domain) continue; // off-topic final rule — skip
+      seen.add(d.document_number);
+      const agency =
+        d.agencies?.find((a) => a.name)?.name ?? d.agencies?.[0]?.raw_name ?? null;
+      rows.push({
+        source: "federal_register_final",
+        source_id: d.document_number,
+        type: "signal",
+        event_type: eventType,
+        title: d.title,
+        agency,
+        jurisdiction: "federal",
+        domain,
+        tags,
+        summary: d.abstract,
+        url: d.html_url,
+        open_date: toIsoDate(d.publication_date),
+        deadline: null,
+        effective_date: toIsoDate(d.effective_on),
+        expiration_date: null,
+        status: eventType === "rule_final_pending_effective" ? "pending_effective" : "effective",
+        raw: d,
+      });
+    }
+  }
+  return rows;
+}
+
+// ──────────────────── Grants.gov: forecasted NOFOs ────────────────────
+// Forecasted opportunities have no close date yet — the value is the early
+// warning, so they're stored dateless and surfaced by the scorer, not the
+// deadlines dashboard.
+
+export async function fetchGrantsGovForecasted(): Promise<OpportunityRow[]> {
+  const byId = new Map<string, OpportunityRow>();
+  for (const keyword of GRANTS_GOV_KEYWORDS) {
+    let hits: GgHit[] = [];
+    try {
+      const data = await getJson("https://api.grants.gov/v1/api/search2", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ keyword, oppStatuses: "forecasted", rows: 50 }),
+      });
+      hits = data?.data?.oppHits ?? [];
+    } catch {
+      continue;
+    }
+    for (const h of hits) {
+      if (byId.has(h.id)) continue;
+      const text = `${h.title} ${(h.cfdaList ?? []).join(" ")}`;
+      const { domain, tags } = classify(text);
+      if (!domain) continue;
+      byId.set(h.id, {
+        source: "grants_gov_forecasted",
+        source_id: h.id,
+        type: "signal",
+        event_type: "grant_forecasted",
+        title: h.title,
+        agency: h.agency ?? null,
+        jurisdiction: "federal",
+        domain,
+        tags,
+        summary: null,
+        url: `https://www.grants.gov/search-results-detail/${h.id}`,
+        open_date: fromUsDate(h.openDate),
+        deadline: fromUsDate(h.closeDate),
+        effective_date: null,
+        expiration_date: null,
+        status: "forecasted",
+        raw: h,
+      });
+    }
+  }
+  return [...byId.values()];
+}
+
+// ──────────────────────── Congress.gov: moving bills ────────────────────────
+// Recently-acted bills (introduced through enacted). Needs a free key from
+// https://api.congress.gov/sign-up — the adapter returns [] without one so the
+// registry row can stay active.
+
+interface CgBill {
+  congress: number;
+  number: string;
+  type: string; // "HR" | "S" | "HJRES" | ...
+  title: string;
+  updateDate: string;
+  latestAction?: { actionDate?: string; text?: string };
+}
+
+const BILL_URL_TYPE: Record<string, string> = {
+  hr: "house-bill",
+  s: "senate-bill",
+  hjres: "house-joint-resolution",
+  sjres: "senate-joint-resolution",
+  hconres: "house-concurrent-resolution",
+  sconres: "senate-concurrent-resolution",
+  hres: "house-resolution",
+  sres: "senate-resolution",
+};
+
+function billEventType(actionText: string): OpportunityRow["event_type"] {
+  const t = actionText.toLowerCase();
+  if (/became public law|signed by president/.test(t)) {
+    return "law_enacted_implementing";
+  }
+  if (/passed (the )?(house|senate)|agreed to (in|by) (the )?(house|senate)/.test(t)) {
+    return "bill_chamber_passed";
+  }
+  if (/ordered to be reported|reported (to|by)|committee/.test(t)) {
+    return "bill_committee_passed";
+  }
+  return "bill_introduced";
+}
+
+export async function fetchCongressGov(): Promise<OpportunityRow[]> {
+  const apiKey = process.env.CONGRESS_GOV_API_KEY;
+  if (!apiKey) return []; // flagged in the registry notes; no-op until keyed
+
+  const since = new Date(Date.now() - 14 * 24 * 60 * 60 * 1000)
+    .toISOString()
+    .slice(0, 19) + "Z";
+  const params = new URLSearchParams({
+    fromDateTime: since,
+    sort: "updateDate desc",
+    limit: "250",
+    format: "json",
+    api_key: apiKey,
+  });
+  const data = await getJson(`https://api.congress.gov/v3/bill?${params}`);
+  const bills: CgBill[] = data?.bills ?? [];
+
+  const rows: OpportunityRow[] = [];
+  for (const b of bills) {
+    if (!b.title || !b.number || !b.type) continue;
+    const { domain, tags } = classify(b.title);
+    if (!domain) continue; // keep on-topic
+    const action = b.latestAction?.text ?? "";
+    const urlType = BILL_URL_TYPE[b.type.toLowerCase()] ?? "house-bill";
+    rows.push({
+      source: "congress_gov",
+      source_id: `${b.congress}-${b.type}-${b.number}`,
+      type: "signal",
+      event_type: billEventType(action),
+      title: `${b.type} ${b.number}: ${b.title}`,
+      agency: "U.S. Congress",
+      jurisdiction: "federal",
+      domain,
+      tags,
+      summary: action || null,
+      url: `https://www.congress.gov/bill/${b.congress}th-congress/${urlType}/${b.number}`,
+      open_date: toIsoDate(b.latestAction?.actionDate ?? b.updateDate),
+      deadline: null,
+      effective_date: null,
+      expiration_date: null,
+      status: action ? action.slice(0, 120) : null,
+      raw: b,
+    });
+  }
+  return rows;
+}
+
 export async function fetchCaGrants(): Promise<OpportunityRow[]> {
   const params = new URLSearchParams({
     resource_id: CA_GRANTS_RESOURCE_ID,
@@ -322,6 +553,7 @@ export async function fetchCaGrants(): Promise<OpportunityRow[]> {
       source: "ca_grants",
       source_id: r.PortalID,
       type: "grant_deadline",
+      event_type: "grant_open",
       title: r.Title,
       agency: r.AgencyDept,
       jurisdiction: "california",
@@ -331,6 +563,8 @@ export async function fetchCaGrants(): Promise<OpportunityRow[]> {
       url: r.GrantURL || `https://www.grants.ca.gov/grants/${r.PortalID}`,
       open_date: toIsoDate(r.OpenDate),
       deadline,
+      effective_date: null,
+      expiration_date: null,
       status: r.Status,
       raw: r,
     });

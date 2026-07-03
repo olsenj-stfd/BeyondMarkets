@@ -14,6 +14,7 @@ interface OpportunityRowDb {
   source: Opportunity["source"];
   source_id: string;
   type: Opportunity["type"];
+  event_type?: Opportunity["eventType"];
   title: string;
   agency: string | null;
   jurisdiction: Opportunity["jurisdiction"];
@@ -23,6 +24,8 @@ interface OpportunityRowDb {
   url: string;
   open_date: string | null;
   deadline: string | null;
+  effective_date?: string | null;
+  expiration_date?: string | null;
   status: string | null;
 }
 
@@ -32,6 +35,7 @@ function toOpportunity(r: OpportunityRowDb): Opportunity {
     source: r.source,
     sourceId: r.source_id,
     type: r.type,
+    eventType: r.event_type ?? null,
     title: r.title,
     agency: r.agency,
     jurisdiction: r.jurisdiction,
@@ -41,6 +45,8 @@ function toOpportunity(r: OpportunityRowDb): Opportunity {
     url: r.url,
     openDate: r.open_date,
     deadline: r.deadline,
+    effectiveDate: r.effective_date ?? null,
+    expirationDate: r.expiration_date ?? null,
     status: r.status,
   };
 }
@@ -48,20 +54,31 @@ function toOpportunity(r: OpportunityRowDb): Opportunity {
 const SELECT_COLS =
   "id, source, source_id, type, title, agency, jurisdiction, domain, tags, summary, url, open_date, deadline, status";
 
+// Taxonomy columns added by the scanner-upgrade migration. Queries try the
+// full column set first and retry with the legacy set, so nothing 500s on an
+// un-migrated database.
+const SELECT_COLS_FULL = `${SELECT_COLS}, event_type, effective_date, expiration_date`;
+
 /** Opportunities whose deadline is today or later, nearest first. */
 export async function getUpcomingOpportunities(limit = 200): Promise<Opportunity[]> {
   if (!isSupabaseConfigured) return [];
   const supabase = await createClient();
   const today = new Date().toISOString().slice(0, 10);
-  const { data, error } = await supabase
-    .from("opportunities")
-    .select(SELECT_COLS)
-    .gte("deadline", today)
-    .order("deadline", { ascending: true })
-    .limit(limit);
 
+  const fetchWith = (cols: string) =>
+    supabase
+      .from("opportunities")
+      .select(cols)
+      .gte("deadline", today)
+      .order("deadline", { ascending: true })
+      .limit(limit);
+
+  let { data, error } = await fetchWith(SELECT_COLS_FULL);
+  if (error) {
+    ({ data, error } = await fetchWith(SELECT_COLS));
+  }
   if (error || !data) return [];
-  return (data as OpportunityRowDb[]).map(toOpportunity);
+  return (data as unknown as OpportunityRowDb[]).map(toOpportunity);
 }
 
 /**
