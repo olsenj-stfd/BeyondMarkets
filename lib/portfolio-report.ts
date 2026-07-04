@@ -172,11 +172,26 @@ export function buildPortfolioReport(
 
   <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 24px;">
     <tr>
-      <td style="border:1px solid ${INK};padding:12px 16px;"><span style="${label}">High grant reach</span><div style="${serif}font-size:24px;">${highReach}</div></td>
+      <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
+        <span style="${label}">High non-dilutive reach</span>
+        <div style="${serif}font-size:24px;">${highReach}</div>
+        <div style="font-size:12px;color:${INK_LIGHT};">${highReach === 1 ? "company" : "companies"} with strong grant fit</div>
+      </td>
       <td style="width:12px;"></td>
-      <td style="border:1px solid ${INK};padding:12px 16px;"><span style="${label}">Climate</span><div style="${serif}font-size:24px;">${climate.tailwind}↑ ${climate.neutral}· ${climate.headwind}↓</div></td>
+      <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
+        <span style="${label}">Regulatory climate</span>
+        <div style="font-size:13px;color:${INK};margin-top:4px;line-height:1.7;">
+          <span style="color:${INK};">●</span> <b>${climate.tailwind}</b> tailwind<br>
+          <span style="color:${INK};opacity:0.35;">●</span> <b>${climate.neutral}</b> neutral<br>
+          <span style="color:${INK};">○</span> <b>${climate.headwind}</b> headwind
+        </div>
+      </td>
       <td style="width:12px;"></td>
-      <td style="border:1px solid ${INK};padding:12px 16px;"><span style="${label}">High policy dependency</span><div style="${serif}font-size:24px;">${highDependency}</div></td>
+      <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
+        <span style="${label}">Policy dependency</span>
+        <div style="${serif}font-size:24px;">${highDependency}</div>
+        <div style="font-size:12px;color:${INK_LIGHT};">${highDependency === 1 ? "company" : "companies"} with a subsidy-dependent thesis</div>
+      </td>
     </tr>
   </table>
 
