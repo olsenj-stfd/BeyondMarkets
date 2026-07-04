@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { csvToCompanies, namesToCompanies } from "@/lib/company-input";
+import { dependencyBand, reachBand } from "@/lib/bands";
 import type {
   PortfolioCompany,
   RegClimate,
@@ -50,51 +51,8 @@ const EXIT_LABEL: Record<string, string> = {
   shutdown: "Shut down",
 };
 
-type Band = "High" | "Medium" | "Low";
-
-// Repeal-prone flagship programs: a single dependency on one of these is enough
-// to flag high policy dependency (they swing with each administration / budget).
-const FLAGSHIP_DEPENDENCY =
-  /45x|45v|45q|45y|48e|\bitc\b|\bptc\b|lcfs|\bira\b|inflation reduction|340b|medicaid|medicare/i;
-
-/**
- * Policy dependency — a descriptive read (not a judgment: a VC may knowingly
- * hold subsidy-dependent positions) grounded in the specific programs the
- * research named:
- *   High   = depends on a flagship repeal-prone program, or on 2+ programs
- *   Medium = depends on exactly one (non-flagship) program
- *   Low    = no specific policy dependency identified
- */
-function dependencyBand(dependencies: string[]): Band {
-  const deps = dependencies.filter((d) => d && d.trim());
-  if (deps.length === 0) return "Low";
-  if (deps.length >= 2 || deps.some((d) => FLAGSHIP_DEPENDENCY.test(d))) {
-    return "High";
-  }
-  return "Medium";
-}
-
-/**
- * Direct grant reach — a transparent, deterministic read of how much grant
- * capital THIS company could win itself, from the real matched grant
- * programs. Entity-gated grants (e.g. nonprofit-only) don't count:
- *   High   = 3+ strongly-matched eligible grants (relevance ≥ 60)
- *   Medium = 1-2 strong eligible grants, or 2+ eligible grants overall
- *   Low    = otherwise
- */
-function reachBand(opps: ScoredOpportunity[]): Band {
-  const grants = opps.filter(
-    (o) =>
-      (o.type === "grant_deadline" ||
-        o.eventType === "grant_open" ||
-        o.eventType === "grant_forecasted") &&
-      !o.entityGate,
-  );
-  const strong = grants.filter((o) => o.relevance >= 60);
-  if (strong.length >= 3) return "High";
-  if (strong.length >= 1 || grants.length >= 2) return "Medium";
-  return "Low";
-}
+// High/Medium/Low band logic lives in lib/bands.ts, shared with the emailed
+// portfolio report.
 
 const DIRECTION_ICON: Record<string, string> = {
   tailwind: "↑ tailwind",
@@ -167,6 +125,9 @@ export default function PortfolioBoard({
   const [addText, setAddText] = useState("");
   const [addLoading, setAddLoading] = useState(false);
   const [addError, setAddError] = useState<string | null>(null);
+  const [reportState, setReportState] = useState<
+    { kind: "idle" } | { kind: "sending" } | { kind: "sent"; to: string } | { kind: "error"; message: string }
+  >({ kind: "idle" });
   const ranOnce = useRef(false);
 
   const scoreOne = useCallback(
@@ -248,6 +209,26 @@ export default function PortfolioBoard({
 
   function rescoreAll() {
     enqueue(companies.map((c) => c.id));
+  }
+
+  async function emailReport() {
+    setReportState({ kind: "sending" });
+    try {
+      const res = await fetch(`/api/portfolios/${portfolioId}/report`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setReportState({
+          kind: "error",
+          message: data.error ?? "Could not send the report. Please try again.",
+        });
+        return;
+      }
+      setReportState({ kind: "sent", to: data.sentTo ?? "your email" });
+    } catch {
+      setReportState({ kind: "error", message: "Network error. Please try again." });
+    }
   }
 
   // ── Add companies to an already-created (possibly scored) portfolio ──
@@ -388,7 +369,22 @@ export default function PortfolioBoard({
           >
             {addOpen ? "Close" : "+ Add companies"}
           </button>
+          <button
+            type="button"
+            className="pill-btn ghost"
+            onClick={emailReport}
+            disabled={reportState.kind === "sending" || scored.length === 0}
+            title="Email a rolled-up report of this portfolio to your sign-in address"
+          >
+            {reportState.kind === "sending" ? "Sending…" : "Email me this report"}
+          </button>
         </div>
+        {reportState.kind === "sent" && (
+          <p className="muted report-status">Report sent to {reportState.to}.</p>
+        )}
+        {reportState.kind === "error" && (
+          <div className="error report-status">{reportState.message}</div>
+        )}
       </section>
 
       {addOpen && (

@@ -1442,6 +1442,10 @@ details.more[open] summary::before {
   margin-bottom: 20px;
 }
 
+.report-status {
+  margin-top: 12px;
+}
+
 /* Company cards */
 .company-cards {
   display: flex;
