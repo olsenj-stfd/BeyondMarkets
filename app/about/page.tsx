@@ -28,16 +28,7 @@ export default function AboutPage() {
           rules, and moving bills come from official sources — Grants.gov, the
           California Grants Portal, the Federal Register, Regulations.gov,
           Congress.gov, and agency newsrooms — each linked back to the record it
-          came from. The qualitative reads (regulatory climate, policy
-          dependency, the program analysis) are AI research, clearly labeled and
-          grounded in that evidence, never invented.
-        </p>
-        <p className="intro-text">
-          The premise is simple: public capital and regulation move venture
-          outcomes as much as markets do — an early non-dilutive award can
-          double a company&apos;s odds of raising follow-on capital, and policy
-          shifts reprice whole sectors overnight. Most investors track that
-          landscape by hand, late, or not at all.
+          came from.
         </p>
       </section>
 
