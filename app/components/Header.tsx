@@ -34,7 +34,6 @@ export default function Header() {
         </div>
       </Link>
       <div className="header-right">
-        <span className="scope-pill">Federal + California</span>
         {ready &&
           (email ? (
             <>
@@ -49,6 +48,9 @@ export default function Header() {
               <Link href="/feedback" className="nav-link">
                 Feedback
               </Link>
+              <Link href="/about" className="nav-link">
+                About
+              </Link>
               <span className="user-email" title={email}>
                 {email}
               </span>
@@ -59,9 +61,14 @@ export default function Header() {
               </form>
             </>
           ) : (
-            <Link href="/login" className="nav-link">
-              Sign in
-            </Link>
+            <>
+              <Link href="/about" className="nav-link">
+                About
+              </Link>
+              <Link href="/login" className="nav-link">
+                Sign in
+              </Link>
+            </>
           ))}
       </div>
     </header>
