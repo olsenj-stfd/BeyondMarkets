@@ -45,7 +45,9 @@ export async function updateSession(request: NextRequest) {
     pathname === "/login" ||
     pathname === "/about" ||
     pathname.startsWith("/auth") ||
-    pathname.startsWith("/api");
+    pathname.startsWith("/api") ||
+    // Shared report snapshots: the unguessable token is the credential.
+    pathname.startsWith("/r/");
 
   if (!user && !isPublic) {
     const url = request.nextUrl.clone();

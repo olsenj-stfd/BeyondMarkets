@@ -128,6 +128,12 @@ export default function PortfolioBoard({
   const [reportState, setReportState] = useState<
     { kind: "idle" } | { kind: "sending" } | { kind: "sent"; to: string } | { kind: "error"; message: string }
   >({ kind: "idle" });
+  const [shareState, setShareState] = useState<
+    | { kind: "idle" }
+    | { kind: "creating" }
+    | { kind: "ready"; url: string; copied: boolean }
+    | { kind: "error"; message: string }
+  >({ kind: "idle" });
   const ranOnce = useRef(false);
 
   const scoreOne = useCallback(
@@ -209,6 +215,33 @@ export default function PortfolioBoard({
 
   function rescoreAll() {
     enqueue(companies.map((c) => c.id));
+  }
+
+  async function shareReport() {
+    setShareState({ kind: "creating" });
+    try {
+      const res = await fetch(`/api/portfolios/${portfolioId}/share`, {
+        method: "POST",
+      });
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok || !data.url) {
+        setShareState({
+          kind: "error",
+          message: data.error ?? "Could not create the share link.",
+        });
+        return;
+      }
+      let copied = false;
+      try {
+        await navigator.clipboard.writeText(data.url);
+        copied = true;
+      } catch {
+        // Clipboard can be blocked; the link is shown either way.
+      }
+      setShareState({ kind: "ready", url: data.url, copied });
+    } catch {
+      setShareState({ kind: "error", message: "Network error. Please try again." });
+    }
   }
 
   async function emailReport() {
@@ -378,12 +411,34 @@ export default function PortfolioBoard({
           >
             {reportState.kind === "sending" ? "Sending…" : "Email me this report"}
           </button>
+          <button
+            type="button"
+            className="pill-btn ghost"
+            onClick={shareReport}
+            disabled={shareState.kind === "creating" || scored.length === 0}
+            title="Create a public snapshot link of this report (also printable to PDF)"
+          >
+            {shareState.kind === "creating" ? "Creating link…" : "Share report ↗"}
+          </button>
         </div>
         {reportState.kind === "sent" && (
           <p className="muted report-status">Report sent to {reportState.to}.</p>
         )}
         {reportState.kind === "error" && (
           <div className="error report-status">{reportState.message}</div>
+        )}
+        {shareState.kind === "ready" && (
+          <p className="muted report-status">
+            {shareState.copied ? "Link copied to clipboard: " : "Share link: "}
+            <a href={shareState.url} target="_blank" rel="noopener noreferrer">
+              {shareState.url}
+            </a>{" "}
+            — a frozen snapshot of this report; anyone with the link can view
+            or save it as a PDF.
+          </p>
+        )}
+        {shareState.kind === "error" && (
+          <div className="error report-status">{shareState.message}</div>
         )}
       </section>
 

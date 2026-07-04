@@ -195,6 +195,35 @@ create policy "own portfolios: delete" on public.portfolios
   for delete using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
+-- Shared report snapshots: an immutable copy of a portfolio report behind an
+-- unguessable token, so a report can be sent as a clean public link. Public
+-- read is by exact primary-key token only — possession of the link is the
+-- credential (fine for beta; add expiry/revocation UI later if needed).
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.report_shares (
+  token uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users (id) on delete cascade,
+  portfolio_name text not null,
+  companies jsonb not null default '[]'::jsonb,
+  created_at timestamptz not null default now()
+);
+
+alter table public.report_shares enable row level security;
+
+drop policy if exists "report shares: public read" on public.report_shares;
+create policy "report shares: public read" on public.report_shares
+  for select using (true);
+
+drop policy if exists "report shares: insert own" on public.report_shares;
+create policy "report shares: insert own" on public.report_shares
+  for insert with check (auth.uid() = user_id);
+
+drop policy if exists "report shares: delete own" on public.report_shares;
+create policy "report shares: delete own" on public.report_shares
+  for delete using (auth.uid() = user_id);
+
+-- ---------------------------------------------------------------------------
 -- Event taxonomy: opportunities gain a typed event classification and the key
 -- dates that make non-open items relevant (a final rule's effective date, a
 -- temporary rule's expiration). Existing rows are backfilled from `type`.

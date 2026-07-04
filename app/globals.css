@@ -1446,6 +1446,36 @@ details.more[open] summary::before {
   margin-top: 12px;
 }
 
+.report-status a {
+  color: var(--text-primary);
+  word-break: break-all;
+}
+
+/* ───────── Shared report snapshot (/r/[token]) ───────── */
+.shared-report {
+  min-height: 100vh;
+}
+
+.print-bar {
+  max-width: 640px;
+  margin: 0 auto;
+  padding: 16px 20px 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+@media print {
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #f2e7da;
+  }
+}
+
 /* Company cards */
 .company-cards {
   display: flex;

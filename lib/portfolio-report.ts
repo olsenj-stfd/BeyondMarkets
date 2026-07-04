@@ -55,11 +55,17 @@ function opportunityLine(o: ScoredOpportunity): string {
   </div>`;
 }
 
-export function buildPortfolioReport(
+/**
+ * The report body (inner markup) — shared by the email (wrapped in a full
+ * document) and the public share page (rendered inline). `generatedAtIso`
+ * pins the header date for snapshots; defaults to now.
+ */
+export function buildPortfolioReportBody(
   portfolioName: string,
   companies: PortfolioCompany[],
   appUrl: string,
-): { subject: string; html: string } {
+  generatedAtIso?: string,
+): string {
   const scored = companies.filter((c) => c.score);
   const today = new Date().toISOString().slice(0, 10);
 
@@ -90,11 +96,14 @@ export function buildPortfolioReport(
     .sort((a, b) => a.opp.deadline!.localeCompare(b.opp.deadline!))
     .slice(0, 15);
 
-  const dateLine = new Date().toLocaleDateString("en-US", {
-    month: "long",
-    day: "numeric",
-    year: "numeric",
-  });
+  const dateLine = (generatedAtIso ? new Date(generatedAtIso) : new Date()).toLocaleDateString(
+    "en-US",
+    {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    },
+  );
 
   const companyBlocks = [...companies]
     .sort((a, b) => a.name.localeCompare(b.name))
@@ -161,9 +170,7 @@ export function buildPortfolioReport(
     )
     .join("");
 
-  const html = `<!DOCTYPE html>
-<html><body style="margin:0;padding:0;background-color:${PAPER};">
-<div style="max-width:640px;margin:0 auto;padding:32px 20px;background-color:${PAPER};font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:${INK};">
+  return `<div style="max-width:640px;margin:0 auto;padding:32px 20px;background-color:${PAPER};font-family:-apple-system,'Segoe UI',Helvetica,Arial,sans-serif;color:${INK};">
   <div style="border-bottom:1px solid ${INK};padding-bottom:16px;margin-bottom:24px;">
     <div style="${label}">RegScout · Portfolio report · ${dateLine}</div>
     <h1 style="${serif}font-size:28px;margin:6px 0 0;">${esc(portfolioName)}</h1>
@@ -212,11 +219,26 @@ export function buildPortfolioReport(
     record before acting. Qualitative reads are AI research grounded in those
     records. <a href="${esc(appUrl)}" style="color:${INK};">Open in RegScout</a>
   </div>
-</div>
-</body></html>`;
+</div>`;
+}
 
+/** The full email: report body wrapped in a standalone HTML document. */
+export function buildPortfolioReport(
+  portfolioName: string,
+  companies: PortfolioCompany[],
+  appUrl: string,
+): { subject: string; html: string } {
+  const dateLine = new Date().toLocaleDateString("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+  });
+  const body = buildPortfolioReportBody(portfolioName, companies, appUrl);
   return {
     subject: `RegScout portfolio report — ${portfolioName} (${dateLine})`,
-    html,
+    html: `<!DOCTYPE html>
+<html><body style="margin:0;padding:0;background-color:${PAPER};">
+${body}
+</body></html>`,
   };
 }
