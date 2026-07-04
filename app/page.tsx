@@ -41,10 +41,13 @@ export default async function Home() {
       <section className="glass-card intro-card">
         <h2 className="section-title">Portfolio assessment</h2>
         <p className="intro-text">
-          Score a whole book of companies on non-dilutive capital within reach,
-          regulatory climate, and policy-dependency risk — grounded in real,
-          dated programs. Paste a list of names and we&apos;ll research each one,
-          upload a CSV, or add them by hand.
+          Add your portfolio companies — paste names and we&apos;ll research
+          each one, paste a CSV, or enter them by hand. Each company is
+          profiled and scored against real federal and California programs:
+          grant money within reach, open rulemakings worth a comment,
+          regulatory tailwinds or headwinds, and the policies its thesis
+          depends on. Deadlines roll up across the book so you know what to
+          act on this quarter.
         </p>
       </section>
 
