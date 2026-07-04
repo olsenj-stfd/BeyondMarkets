@@ -54,13 +54,13 @@ export default function AboutPage() {
           budgeting mechanism for climate investment.
         </p>
         <p className="intro-text">
-          She holds a B.S. in Bioengineering from UCLA and an M.S. from UC
-          Irvine, and is completing an M.S. in Management at Stanford GSB with a
-          certificate in Public Management and Social Innovation, where she also
-          evaluates early-stage ventures with the GSB Impact Fund. RegScout is
-          that career distilled into software: the regulatory navigation,
-          community knowledge, and capital-allocation judgment she built in
-          public service, made available to every impact venture.
+          She holds a B.S. in Bioengineering from UCLA, an M.S. from UC Irvine,
+          and an M.S. in Management from Stanford GSB (2026) with a certificate
+          in Public Management and Social Innovation, where she evaluated
+          early-stage ventures with the GSB Impact Fund. RegScout is that
+          career distilled into software: the regulatory navigation, community
+          knowledge, and capital-allocation judgment she built in public
+          service, made available to every impact venture.
         </p>
         <a
           href="https://olsenj-stfd.github.io/"
