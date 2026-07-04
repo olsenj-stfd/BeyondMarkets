@@ -1424,6 +1424,20 @@ details.more[open] summary::before {
   flex-wrap: wrap;
 }
 
+.rollup-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.rollup-filter-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 .add-companies {
   margin-bottom: 20px;
 }
