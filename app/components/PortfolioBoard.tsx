@@ -402,15 +402,9 @@ export default function PortfolioBoard({
           >
             {addOpen ? "Close" : "+ Add companies"}
           </button>
-          <button
-            type="button"
-            className="pill-btn ghost"
-            onClick={emailReport}
-            disabled={reportState.kind === "sending" || scored.length === 0}
-            title="Email a rolled-up report of this portfolio to your sign-in address"
-          >
-            {reportState.kind === "sending" ? "Sending…" : "Email me this report"}
-          </button>
+          {/* "Email me this report" hidden until email delivery is fixed
+              (Resend only delivers to the account owner without a verified
+              domain). The endpoint + emailReport handler stay wired. */}
           <button
             type="button"
             className="pill-btn ghost"
