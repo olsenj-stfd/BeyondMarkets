@@ -18,17 +18,15 @@ export default function AboutPage() {
           RegScout is for the people who fund impact work. Foundation program
           officers, grants managers, nonprofits, family offices, and impact
           funds whose portfolio companies do mission-driven work. Most of them
-          fund without an in-house policy team, against a policy landscape they
-          mostly don&apos;t track. Large foundations fund the think tanks
-          writing the bills. Everyone else finds out afterward.
+          fund without an in-house policy team.
         </p>
         <p className="intro-text">
-          RegScout narrows that gap in two ways. It matches the organizations
-          you fund to open grant programs. And it surfaces regulatory activity
-          and bills that are still on the horizon, while there is time to
-          comment or plan. Paste a list of names, a CSV, or enter organizations
-          by hand. RegScout researches each one and scores the portfolio on
-          grant fit, regulatory climate, and policy dependency.
+          RegScout matches the organizations you fund to open grant programs.
+          And it surfaces regulatory activity and bills that are still on the
+          horizon, while there is time to comment or plan. Paste a list of
+          names, a CSV, or enter organizations by hand. RegScout researches
+          each one and scores the portfolio on grant fit, regulatory climate,
+          and policy dependency.
         </p>
         <p className="intro-text">
           Every date is a real record. Grant deadlines, comment periods, final
