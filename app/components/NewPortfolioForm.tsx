@@ -18,7 +18,15 @@ interface Draft {
   geography: string;
 }
 
-const STAGES = ["", "Pre-seed", "Seed", "Series A", "Growth", "Established"];
+const STAGES = [
+  "",
+  "Nonprofit",
+  "Fiscally sponsored",
+  "Social enterprise",
+  "Public agency",
+  "Early-stage company",
+  "Established company",
+];
 
 function emptyDraft(): Draft {
   return { name: "", description: "", sector: "", stage: "", geography: "" };
@@ -65,7 +73,7 @@ export default function NewPortfolioForm() {
     setError(null);
     const companies = buildCompanies();
     if (companies.length === 0) {
-      setError("Add at least one company (a name is enough).");
+      setError("Add at least one organization. A name is enough.");
       return;
     }
     setLoading(true);
@@ -100,7 +108,7 @@ export default function NewPortfolioForm() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. Climate Fund I — active book"
+            placeholder="e.g. 2026 climate grantees"
           />
         </label>
 
@@ -130,16 +138,21 @@ export default function NewPortfolioForm() {
 
         {mode === "names" && (
           <label className="field">
-            <span>Company names — one per line (optionally “Name, website”)</span>
+            <span>
+              Organization names, one per line. Add a website after a comma if
+              you have it.
+            </span>
             <textarea
               value={namesText}
               onChange={(e) => setNamesText(e.target.value)}
-              placeholder={"Heirloom Carbon\nForm Energy, formenergy.com\nTwelve"}
+              placeholder={
+                "Valley Air Coalition\nCentral Valley Health Network, cvhealthnet.org"
+              }
               rows={6}
             />
             <span className="muted">
-              We&apos;ll research each company on the web to draft its profile,
-              then score it. Drafts are editable later.
+              RegScout researches each organization on the web to draft its
+              profile, then scores it. Drafts are editable later.
             </span>
           </label>
         )}
@@ -147,14 +160,14 @@ export default function NewPortfolioForm() {
         {mode === "csv" && (
           <label className="field">
             <span>
-              Paste CSV — columns: name, description, sector, stage, geography,
-              website (header row optional)
+              Paste a CSV. Columns are name, description, sector, stage,
+              geography, website. A header row is optional.
             </span>
             <textarea
               value={csvText}
               onChange={(e) => setCsvText(e.target.value)}
               placeholder={
-                "name,description,sector,stage,geography\nHeirloom,Direct air capture using limestone,Carbon removal,Series B,California"
+                "name,description,sector,stage,geography\nValley Air Coalition,Air quality advocacy in the Central Valley,Environmental health,Established,California"
               }
               rows={6}
             />
@@ -169,7 +182,7 @@ export default function NewPortfolioForm() {
             {rows.map((r, i) => (
               <div className="portfolio-row" key={i}>
                 <div className="portfolio-row-head">
-                  <span className="portfolio-row-num">Company {i + 1}</span>
+                  <span className="portfolio-row-num">Organization {i + 1}</span>
                   {rows.length > 1 && (
                     <button
                       type="button"
@@ -185,7 +198,7 @@ export default function NewPortfolioForm() {
                     type="text"
                     value={r.name}
                     onChange={(e) => update(i, { name: e.target.value })}
-                    placeholder="Company name"
+                    placeholder="Organization name"
                   />
                   <input
                     type="text"
@@ -199,7 +212,7 @@ export default function NewPortfolioForm() {
                   >
                     {STAGES.map((s) => (
                       <option key={s} value={s}>
-                        {s || "Stage (optional)"}
+                        {s || "Type (optional)"}
                       </option>
                     ))}
                   </select>
@@ -213,20 +226,21 @@ export default function NewPortfolioForm() {
                 <textarea
                   value={r.description}
                   onChange={(e) => update(i, { description: e.target.value })}
-                  placeholder="What does this company do? (leave blank to auto-research)"
+                  placeholder="What does this organization do? (leave blank to auto-research)"
                   rows={2}
                 />
               </div>
             ))}
             <button type="button" className="pill-btn ghost" onClick={addRow}>
-              + Add company
+              + Add organization
             </button>
           </div>
         )}
 
         <div className="portfolio-form-actions">
           <span className="muted">
-            {detected} {detected === 1 ? "company" : "companies"} detected
+            {detected} {detected === 1 ? "organization" : "organizations"}{" "}
+            detected
           </span>
           <button
             type="submit"

@@ -30,7 +30,7 @@ export default function Header() {
         <div className="logo-mark" />
         <div>
           <h1>RegScout</h1>
-          <p className="tagline">Regulatory · Grants · Partners</p>
+          <p className="tagline">Funding · Rules · Bills</p>
         </div>
       </Link>
       <div className="header-right">

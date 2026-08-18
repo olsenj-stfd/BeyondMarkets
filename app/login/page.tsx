@@ -80,8 +80,8 @@ export default function LoginPage() {
       <section className="glass-card auth-card">
         <h1 className="auth-title">Enter the beta</h1>
         <p className="auth-sub">
-          We&apos;re in beta — no password needed. Just enter your email to save
-          projects and track your regulatory landscape.
+          RegScout is in beta. No password needed. Enter your email to get
+          started.
         </p>
 
         {error && <div className="error">{error}</div>}
@@ -94,7 +94,7 @@ export default function LoginPage() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               autoComplete="email"
-              placeholder="you@company.com"
+              placeholder="you@foundation.org"
               required
             />
           </label>

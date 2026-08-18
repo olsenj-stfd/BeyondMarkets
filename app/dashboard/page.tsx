@@ -60,21 +60,21 @@ export default async function DashboardPage() {
       <section className="glass-card intro-card">
         <h2 className="section-title">Upcoming deadlines</h2>
         <p className="intro-text">
-          Every dated deadline across your portfolios — grant applications and
-          comment periods matched to your companies, soonest first. Score a
-          portfolio to populate it.
+          Every dated deadline across your portfolios. Grant applications and
+          comment periods matched to the organizations you fund, soonest
+          first. Score a portfolio to populate it.
         </p>
       </section>
 
       {portfolios.length === 0 ? (
         <p className="empty">
-          No portfolios yet. <Link href="/">Create one</Link> and its deadlines
+          No portfolios yet. <Link href="/">Create one</Link>. Its deadlines
           will roll up here.
         </p>
       ) : items.length === 0 ? (
         <p className="empty">
           No upcoming dated deadlines across your portfolios yet. Open a
-          portfolio and score (or re-score) its companies to populate this.
+          portfolio and score its organizations to populate this.
         </p>
       ) : (
         <DeadlinesRollup
@@ -84,9 +84,9 @@ export default async function DashboardPage() {
       )}
 
       <p className="disclaimer">
-        Dates are pulled directly from each official source and link back to it.
-        Always confirm a deadline against the linked source before acting —
-        comment periods and solicitations can be amended.
+        Dates are pulled directly from each official source and link back to
+        it. Confirm a deadline against the linked source before acting.
+        Comment periods and solicitations can be amended.
       </p>
     </main>
   );

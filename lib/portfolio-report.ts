@@ -123,7 +123,7 @@ export function buildPortfolioReportBody(
         ? `<div style="border:1px solid ${INK};padding:10px 14px;margin:12px 0 0;">
              <span style="${label}">Watch</span>
              <div style="font-size:13px;color:${INK};">${esc(s.watchItem.what)}${
-               s.watchItem.date ? ` — ${fmtDate(s.watchItem.date)}` : ""
+               s.watchItem.date ? ` (${fmtDate(s.watchItem.date)})` : ""
              }</div>
            </div>`
         : "";
@@ -174,7 +174,7 @@ export function buildPortfolioReportBody(
   <div style="border-bottom:1px solid ${INK};padding-bottom:16px;margin-bottom:24px;">
     <div style="${label}">RegScout · Portfolio report · ${dateLine}</div>
     <h1 style="${serif}font-size:28px;margin:6px 0 0;">${esc(portfolioName)}</h1>
-    <div style="font-size:13px;color:${INK_LIGHT};margin-top:4px;">${scored.length} of ${companies.length} companies scored</div>
+    <div style="font-size:13px;color:${INK_LIGHT};margin-top:4px;">${scored.length} of ${companies.length} organizations scored</div>
   </div>
 
   <table role="presentation" cellpadding="0" cellspacing="0" style="width:100%;margin:0 0 24px;">
@@ -182,7 +182,7 @@ export function buildPortfolioReportBody(
       <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
         <span style="${label}">High non-dilutive reach</span>
         <div style="${serif}font-size:24px;">${highReach}</div>
-        <div style="font-size:12px;color:${INK_LIGHT};">${highReach === 1 ? "company" : "companies"} with strong grant fit</div>
+        <div style="font-size:12px;color:${INK_LIGHT};">${highReach === 1 ? "organization" : "organizations"} with strong grant fit</div>
       </td>
       <td style="width:12px;"></td>
       <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
@@ -197,7 +197,7 @@ export function buildPortfolioReportBody(
       <td style="border:1px solid ${INK};padding:12px 16px;vertical-align:top;">
         <span style="${label}">Policy dependency</span>
         <div style="${serif}font-size:24px;">${highDependency}</div>
-        <div style="font-size:12px;color:${INK_LIGHT};">${highDependency === 1 ? "company" : "companies"} with a subsidy-dependent thesis</div>
+        <div style="font-size:12px;color:${INK_LIGHT};">${highDependency === 1 ? "organization depends" : "organizations depend"} on a specific program</div>
       </td>
     </tr>
   </table>
@@ -211,11 +211,11 @@ export function buildPortfolioReportBody(
       : ""
   }
 
-  <div style="${label}margin:24px 0 12px;">Companies</div>
+  <div style="${label}margin:24px 0 12px;">Organizations</div>
   ${companyBlocks}
 
   <div style="border-top:1px solid ${INK};padding-top:16px;margin-top:24px;font-size:12px;color:${INK_LIGHT};">
-    Dates come straight from official sources — confirm against the linked
+    Dates come straight from official sources. Confirm against the linked
     record before acting. Qualitative reads are AI research grounded in those
     records. <a href="${esc(appUrl)}" style="color:${INK};">Open in RegScout</a>
   </div>
@@ -235,7 +235,7 @@ export function buildPortfolioReport(
   });
   const body = buildPortfolioReportBody(portfolioName, companies, appUrl);
   return {
-    subject: `RegScout portfolio report — ${portfolioName} (${dateLine})`,
+    subject: `RegScout portfolio report | ${portfolioName} (${dateLine})`,
     html: `<!DOCTYPE html>
 <html><body style="margin:0;padding:0;background-color:${PAPER};">
 ${body}

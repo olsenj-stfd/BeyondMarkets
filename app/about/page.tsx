@@ -2,9 +2,8 @@ import Link from "next/link";
 import Header from "@/app/components/Header";
 
 export const metadata = {
-  title: "About — RegScout",
-  description:
-    "Why RegScout exists, how it works, and who builds it.",
+  title: "About | RegScout",
+  description: "Why RegScout exists, how it works, and who builds it.",
 };
 
 export default function AboutPage() {
@@ -16,42 +15,48 @@ export default function AboutPage() {
         <span className="project-date">About</span>
         <h2 className="section-title">What RegScout does</h2>
         <p className="intro-text">
-          RegScout is regulatory and funding intelligence for mission-driven
-          investors and founders. Point it at a portfolio — paste a list of
-          company names, upload a CSV, or enter them by hand — and it researches
-          each company, maps its regulatory exposure, and scores the book on
-          non-dilutive capital within reach, regulatory climate, and policy
-          dependency.
+          RegScout is for the people who deploy philanthropic capital.
+          Foundation program officers, grants managers, nonprofits, and family
+          offices that give money away without an in-house policy team. These
+          organizations move money against a policy landscape they mostly
+          don&apos;t track. Large foundations fund the think tanks writing the
+          bills. Everyone else finds out afterward.
         </p>
         <p className="intro-text">
-          Everything dated is real: grant deadlines, comment periods, final
-          rules, and moving bills come from official sources — Grants.gov, the
-          California Grants Portal, the Federal Register, Regulations.gov,
-          Congress.gov, and agency newsrooms — each linked back to the record it
-          came from.
+          RegScout narrows that gap in two ways. It matches the organizations
+          you fund to open grant programs. And it surfaces regulatory activity
+          and bills that are still on the horizon, while there is time to
+          comment or plan. Paste a list of names, a CSV, or enter organizations
+          by hand. RegScout researches each one and scores the portfolio on
+          grant fit, regulatory climate, and policy dependency.
+        </p>
+        <p className="intro-text">
+          Every date is a real record. Grant deadlines, comment periods, final
+          rules, and bills come from Grants.gov, the California Grants Portal,
+          the Federal Register, Regulations.gov, Congress.gov, and agency
+          newsrooms. Each item links back to its source.
         </p>
       </section>
 
       <section className="glass-card intro-card">
         <h2 className="section-title">Who builds it</h2>
         <p className="intro-text">
-          RegScout is built by <strong>Jessica L. Olsen</strong> — a
-          public-sector operator and impact investor who spent eleven years
-          turning policy and public capital into cleaner air and stronger
-          communities. At the San Joaquin Valley Air District she rose from
-          supervisor to director, overseeing a $140M+ community investment
-          portfolio across 200+ projects, facilitating 500+ community meetings
-          under AB 617, and creating California&apos;s first participatory
-          budgeting mechanism for climate investment.
+          RegScout is built by <strong>Jessica L. Olsen</strong>, a
+          public-sector operator and grantmaker. She spent eleven years turning
+          policy and public capital into cleaner air and stronger communities.
+          At the San Joaquin Valley Air District she rose from supervisor to
+          director, oversaw a $140M+ community investment portfolio across 200+
+          projects, facilitated 500+ community meetings under AB 617, and
+          created California&apos;s first participatory budgeting mechanism for
+          climate investment.
         </p>
         <p className="intro-text">
           She holds a B.S. in Bioengineering from UCLA, an M.S. from UC Irvine,
           and an M.S. in Management from Stanford GSB (2026) with a certificate
-          in Public Management and Social Innovation, where she evaluated
-          early-stage ventures with the GSB Impact Fund. RegScout is that
-          career distilled into software: the regulatory navigation, community
-          knowledge, and capital-allocation judgment she built in public
-          service, made available to every impact venture.
+          in Public Management and Social Innovation. RegScout is that career
+          turned into software. It carries the program knowledge and
+          grant-making judgment she built in public service, for the people
+          giving money away.
         </p>
         <a
           href="https://olsenj-stfd.github.io/"
@@ -66,11 +71,10 @@ export default function AboutPage() {
       <section className="glass-card intro-card">
         <h2 className="section-title">Beta</h2>
         <p className="intro-text">
-          RegScout is in active beta — the dataset, scoring, and interface are
-          evolving weekly. If something is broken, confusing, or missing,{" "}
-          <Link href="/feedback">tell us</Link>; every note shapes what gets
-          built next. Always confirm dates and program details against the
-          linked official source before making a compliance or funding decision.
+          RegScout is a beta. Jessica built it herself. If something is broken,
+          confusing, or missing, <Link href="/feedback">tell her</Link>. Every
+          note shapes what gets built next. Confirm dates and program details
+          against the linked source before you rely on them.
         </p>
       </section>
     </main>

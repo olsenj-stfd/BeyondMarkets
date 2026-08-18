@@ -165,7 +165,7 @@ export default function PortfolioBoard({
             }
             setErrors((e) => ({
               ...e,
-              [companyId]: data.error ?? "Could not score this company.",
+              [companyId]: data.error ?? "Could not score this organization.",
             }));
             return null;
           }
@@ -294,7 +294,9 @@ export default function PortfolioBoard({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok || !data.companies) {
-        setAddError(data.error ?? "Could not add the companies. Please try again.");
+        setAddError(
+          data.error ?? "Could not add the organizations. Please try again.",
+        );
         return;
       }
       setCompanies(data.companies as PortfolioCompany[]);
@@ -393,10 +395,10 @@ export default function PortfolioBoard({
         <span className="project-date">Portfolio</span>
         <h2 className="section-title">{name}</h2>
         <p className="intro-text">
-          {scored.length} of {companies.length} companies scored
-          {isBusy ? " · scoring…" : ""}. Non-dilutive and action items are real,
-          dated programs; regulatory climate and policy dependency come from
-          the research — open a company&apos;s program analysis for the
+          {scored.length} of {companies.length} organizations scored
+          {isBusy ? " · scoring…" : ""}. Deadlines and programs are real, dated
+          records. Regulatory climate and policy dependency come from the
+          research. Open an organization&apos;s program analysis for the
           reasoning.
         </p>
         <div className="board-actions">
@@ -415,7 +417,7 @@ export default function PortfolioBoard({
                 className="pill-btn ghost"
                 onClick={() => setAddOpen((o) => !o)}
               >
-                {addOpen ? "Close" : "+ Add companies"}
+                {addOpen ? "Close" : "+ Add organizations"}
               </button>
             </>
           )}
@@ -443,9 +445,9 @@ export default function PortfolioBoard({
             {shareState.copied ? "Link copied to clipboard: " : "Share link: "}
             <a href={shareState.url} target="_blank" rel="noopener noreferrer">
               {shareState.url}
-            </a>{" "}
-            — a frozen snapshot of this report; anyone with the link can view
-            or save it as a PDF.
+            </a>
+            . A frozen snapshot of this report. Anyone with the link can view
+            it or save it as a PDF.
           </p>
         )}
         {shareState.kind === "error" && (
@@ -458,7 +460,7 @@ export default function PortfolioBoard({
               {capReached === "user_cap"
                 ? "RegScout is in beta and every run costs real compute, so runs are limited for now."
                 : "New runs are paused while we make room in the beta."}{" "}
-              Already-scored companies stay viewable and shareable.
+              Already-scored organizations stay viewable and shareable.
             </p>
             <a className="pill-btn" href={ACCESS_REQUEST_MAILTO}>
               Request more access
@@ -489,16 +491,16 @@ export default function PortfolioBoard({
             <label className="field">
               <span>
                 {addMode === "names"
-                  ? "Company names — one per line (optionally “Name, website”)"
-                  : "Paste CSV — columns: name, description, sector, stage, geography, website (header row optional)"}
+                  ? "Organization names, one per line. Add a website after a comma if you have it."
+                  : "Paste a CSV. Columns are name, description, sector, stage, geography, website. A header row is optional."}
               </span>
               <textarea
                 value={addText}
                 onChange={(e) => setAddText(e.target.value)}
                 placeholder={
                   addMode === "names"
-                    ? "Heirloom Carbon\nForm Energy, formenergy.com"
-                    : "name,description,sector,stage,geography\nHeirloom,Direct air capture using limestone,Carbon removal,Series B,California"
+                    ? "Valley Air Coalition\nCentral Valley Health Network, cvhealthnet.org"
+                    : "name,description,sector,stage,geography\nValley Air Coalition,Air quality advocacy in the Central Valley,Environmental health,Established,California"
                 }
                 rows={4}
               />
@@ -506,8 +508,9 @@ export default function PortfolioBoard({
             <div className="portfolio-form-actions">
               <span className="muted">
                 {addParsed.length}{" "}
-                {addParsed.length === 1 ? "company" : "companies"} detected —
-                they&apos;ll be researched &amp; scored after the current queue
+                {addParsed.length === 1 ? "organization" : "organizations"}{" "}
+                detected. They&apos;ll be researched and scored after the
+                current queue.
               </span>
               <button
                 type="submit"
@@ -527,81 +530,84 @@ export default function PortfolioBoard({
         <summary>How to read these scores</summary>
         <div className="methodology-body">
           <p>
-            <strong>Direct grant reach</strong> — how much grant capital this
-            company could win itself, computed from the real matched grant
-            programs (no black box). Grants gated by entity type (e.g.
-            nonprofit-only) don&apos;t count here — they show under ecosystem
-            funding instead:
+            <strong>Direct grant reach.</strong> How much grant money this
+            organization could win itself, computed from the real matched grant
+            programs. No black box. Grants gated by entity type don&apos;t
+            count here. They show under ecosystem funding instead.
           </p>
           <ul>
             <li>
-              <b>High</b> — 3+ strongly-matched eligible grants (relevance ≥ 60)
+              <b>High</b> means 3 or more strongly matched eligible grants
+              (relevance 60 or higher).
             </li>
             <li>
-              <b>Medium</b> — 1–2 strong grants, or 2+ matched grants overall
+              <b>Medium</b> means 1 or 2 strong grants, or 2 or more matched
+              grants overall.
             </li>
             <li>
-              <b>Low</b> — no well-matched grant programs currently open
+              <b>Low</b> means no well-matched grant programs currently open.
             </li>
           </ul>
           <p>
-            <strong>Policy dependency</strong> — how much the company&apos;s
-            thesis relies on specific subsidies or policies, from the programs
-            the research names. This is descriptive, not a verdict — many strong
-            theses are deliberately policy-driven; the point is to know which
-            programs to watch:
+            <strong>Policy dependency.</strong> How much the
+            organization&apos;s work relies on specific subsidies or policies,
+            from the programs the research names. This is a description, not a
+            verdict. Many strong programs are deliberately policy-driven. The
+            point is to know which programs to watch.
           </p>
           <ul>
             <li>
-              <b>High</b> — depends on a repeal-prone flagship program (e.g. 45X,
-              45V, ITC, LCFS, Medicaid) or on 2+ programs
+              <b>High</b> means it depends on a repeal-prone flagship program
+              (45X, ITC, LCFS, Medicaid) or on 2 or more programs.
             </li>
             <li>
-              <b>Medium</b> — depends on exactly one non-flagship program
+              <b>Medium</b> means it depends on exactly one non-flagship
+              program.
             </li>
             <li>
-              <b>Low</b> — no specific policy dependency identified
+              <b>Low</b> means no specific policy dependency was identified.
             </li>
           </ul>
           <p>
-            <strong>Regulatory climate</strong> — the direction of regulatory
-            momentum for the company&apos;s sector (a model assessment):
+            <strong>Regulatory climate.</strong> The direction of regulatory
+            momentum for the organization&apos;s sector. This is a model
+            assessment.
           </p>
           <ul>
             <li>
-              <b>Tailwind</b> — rules, standards, or mandates are creating demand
-              or funding for what they do.
+              <b>Tailwind</b> means rules, standards, or mandates are creating
+              demand or funding for the work.
             </li>
             <li>
-              <b>Neutral</b> — no strong regulatory push either way.
+              <b>Neutral</b> means no strong regulatory push either way.
             </li>
             <li>
-              <b>Headwind</b> — rollbacks, permitting friction, or enforcement
-              risk are working against them.
+              <b>Headwind</b> means rollbacks, permitting friction, or
+              enforcement risk are working against it.
             </li>
           </ul>
           <p>
-            <strong>Defining event &amp; watch item</strong> — the one
-            development that most reshapes the company&apos;s market (pending-
-            effective final rules and enacted laws count, not just open
-            dockets), and the single highest-signal upcoming date to monitor.
-            Both cite tracked records; when something isn&apos;t in the feeds
-            yet it&apos;s labeled as a coverage gap.
+            <strong>Defining event and watch item.</strong> The one development
+            that most reshapes the organization&apos;s world, and the single
+            highest-signal upcoming date to monitor. Final rules pending
+            effectiveness and enacted laws count, not just open dockets. Both
+            cite tracked records. When something isn&apos;t in the feeds yet,
+            it&apos;s labeled as a coverage gap.
           </p>
           <p>
-            <strong>Ecosystem funding</strong> — money flowing to the
-            company&apos;s customers, partners, or substitutes, with direction:
-            a subsidy to a substitute can be a headwind and a product opening
-            at once.
+            <strong>Ecosystem funding.</strong> Money flowing to the people an
+            organization serves, its partners, or its substitutes, with
+            direction. A subsidy to a substitute can be a headwind and an
+            opening at once.
           </p>
           <p className="muted">
             Events, dates, and links are real records from tracked sources
             (Grants.gov, Federal Register, Regulations.gov, Congress.gov, CA
             Grants Portal, agency newsrooms, state regulators). The analysis
-            connecting them to this company comes from Claude&apos;s research —
-            open a company&apos;s program analysis to see the affected node and
-            mechanism behind every item. Enforcement precedent is cited only
-            from tracked enforcement records, never from model memory.
+            connecting them to an organization comes from Claude&apos;s
+            research. Open the program analysis to see the mechanism behind
+            every item. Enforcement precedent is cited only from tracked
+            records, never from model memory.
           </p>
         </div>
       </details>
@@ -612,8 +618,8 @@ export default function PortfolioBoard({
             <span className="stat-label">High non-dilutive reach</span>
             <span className="stat-value">{highReach.length}</span>
             <span className="stat-sub">
-              {highReach.length === 1 ? "company" : "companies"} with strong grant
-              fit
+              {highReach.length === 1 ? "organization" : "organizations"} with
+              strong grant fit
             </span>
           </div>
           <div className="glass-card stat">
@@ -637,8 +643,10 @@ export default function PortfolioBoard({
             <span className="stat-label">Policy dependency</span>
             <span className="stat-value">{highDependency.length}</span>
             <span className="stat-sub">
-              {highDependency.length === 1 ? "company" : "companies"} with a
-              subsidy-dependent thesis
+              {highDependency.length === 1
+                ? "organization depends"
+                : "organizations depend"}{" "}
+              on a specific program
             </span>
           </div>
         </section>
@@ -648,8 +656,8 @@ export default function PortfolioBoard({
         <section className="glass-card act-quarter">
           <h3 className="section-title">Act this quarter</h3>
           <p className="muted">
-            Real deadlines across the book, due 30–100 days out — far enough to
-            mount an application, close enough to act now.
+            Dated deadlines across the portfolio, due 30 to 100 days out. Far
+            enough to mount an application. Close enough to act now.
           </p>
           <ul className="act-list">
             {actions.map(({ opp, companies: affected }) => (
@@ -663,7 +671,7 @@ export default function PortfolioBoard({
                     {opp.agency ? `${opp.agency} · ` : ""}
                     {opp.type === "grant_deadline" ? "Grant" : "Comment period"}
                     {` · ${affected.length} ${
-                      affected.length === 1 ? "company" : "companies"
+                      affected.length === 1 ? "organization" : "organizations"
                     }`}
                   </span>
                   <span className="act-companies">{affected.join(", ")}</span>
@@ -746,7 +754,7 @@ export default function PortfolioBoard({
                       className="link-btn"
                       onClick={() => enqueue([c.id])}
                       disabled={isScoring}
-                      title="Re-run the research and scoring for this company"
+                      title="Re-run the research and scoring for this organization"
                     >
                       {isScoring ? "Running…" : "Re-run ↺"}
                     </button>
@@ -1047,13 +1055,13 @@ export default function PortfolioBoard({
                       })}
                       {s.opportunities.length === 0 && (
                         <p className="muted">
-                          Nothing in the tracked feeds matched this company
-                          right now — grants, pending rules, bills, or
-                          enforcement. That reflects current feed coverage
-                          (Grants.gov, CA Grants Portal, Federal Register,
-                          Regulations.gov, Congress.gov, agency newsrooms), not
-                          necessarily the company. Feeds ingest daily; re-score
-                          to refresh.
+                          Nothing in the tracked feeds matched this
+                          organization right now. No grants, pending rules,
+                          bills, or enforcement. That reflects current feed
+                          coverage (Grants.gov, CA Grants Portal, Federal
+                          Register, Regulations.gov, Congress.gov, agency
+                          newsrooms), not necessarily the organization. Feeds
+                          ingest daily. Re-score to refresh.
                         </p>
                       )}
                     </div>

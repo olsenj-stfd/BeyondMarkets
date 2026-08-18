@@ -14,9 +14,9 @@ const playfair = Playfair_Display({
 });
 
 export const metadata: Metadata = {
-  title: "RegScout — Regulatory, Grant & Partner Intelligence",
+  title: "RegScout | Funding and policy tracking for grantmakers",
   description:
-    "Describe your venture and discover the regulations, ongoing funding opportunities, and partners that matter — federal and California.",
+    "RegScout matches the organizations you fund to open grant programs and surfaces the rules and bills still on the horizon. Federal and California sources. A beta.",
 };
 
 export default function RootLayout({

@@ -50,13 +50,13 @@ export default function FeedbackPage() {
       <section className="glass-card intro-card">
         <h2 className="section-title">Share feedback</h2>
         <p className="intro-text">
-          We&apos;re in beta and building this for you. Tell us what&apos;s
-          working, what&apos;s broken, or what you wish it did — every note helps.
+          RegScout is a beta. Tell us what&apos;s working, what&apos;s broken,
+          or what you wish it did. Every note shapes what gets built next.
         </p>
 
         {sent ? (
           <div className="notice">
-            Thanks — your feedback was sent. {" "}
+            Thanks. Your feedback was sent.{" "}
             <button
               type="button"
               className="link-btn inline"
