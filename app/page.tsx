@@ -43,9 +43,10 @@ export default async function Home() {
           See what&apos;s coming for the organizations you fund
         </h2>
         <p className="intro-text">
-          Paste a list of grantees. RegScout researches each one, matches it
-          to open funding, and flags the rules and bills still on the horizon.
-          Every date links to the official record.
+          Paste a list of the organizations you fund, grantees or portfolio
+          companies. RegScout researches each one, matches it to open funding,
+          and flags the rules and bills still on the horizon. Every date links
+          to the official record.
         </p>
       </section>
 

@@ -108,7 +108,7 @@ export default function NewPortfolioForm() {
             type="text"
             value={name}
             onChange={(e) => setName(e.target.value)}
-            placeholder="e.g. 2026 climate grantees"
+            placeholder="e.g. 2026 climate portfolio"
           />
         </label>
 

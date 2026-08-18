@@ -15,12 +15,12 @@ export default function AboutPage() {
         <span className="project-date">About</span>
         <h2 className="section-title">What RegScout does</h2>
         <p className="intro-text">
-          RegScout is for the people who deploy philanthropic capital.
-          Foundation program officers, grants managers, nonprofits, and family
-          offices that give money away without an in-house policy team. These
-          organizations move money against a policy landscape they mostly
-          don&apos;t track. Large foundations fund the think tanks writing the
-          bills. Everyone else finds out afterward.
+          RegScout is for the people who fund impact work. Foundation program
+          officers, grants managers, nonprofits, family offices, and impact
+          funds whose portfolio companies do mission-driven work. Most of them
+          fund without an in-house policy team, against a policy landscape they
+          mostly don&apos;t track. Large foundations fund the think tanks
+          writing the bills. Everyone else finds out afterward.
         </p>
         <p className="intro-text">
           RegScout narrows that gap in two ways. It matches the organizations
