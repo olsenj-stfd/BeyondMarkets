@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getRelevantEvents } from "@/lib/opportunities";
 import { scoreCompany } from "@/lib/portfolio";
 import { anthropicErrorResponse } from "@/lib/anthropic-error";
+import { capMessage, checkRunAllowance, recordRun } from "@/lib/usage";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -76,6 +77,17 @@ export async function POST(
       { status: 409 },
     );
   }
+
+  // Beta budget guard: one run = one company scored. Counted here, at the
+  // point of the expensive call, so re-runs also count.
+  const allowance = await checkRunAllowance(supabase, user.id);
+  if (!allowance.allowed && allowance.code) {
+    return NextResponse.json(
+      { error: capMessage(allowance.code), code: allowance.code },
+      { status: 429 },
+    );
+  }
+  await recordRun(supabase, user.id);
 
   const ac = new AbortController();
   const timer = setTimeout(() => ac.abort(), SCORE_TIMEOUT_MS);

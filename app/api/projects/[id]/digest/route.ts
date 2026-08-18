@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { webDigest } from "@/lib/web-digest";
+import { capMessage, checkGlobalAllowance, recordRun } from "@/lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -32,6 +33,16 @@ export async function POST(
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
+
+  // Beta budget guard (global backstop only on this legacy flow).
+  const allowance = await checkGlobalAllowance(supabase);
+  if (!allowance.allowed && allowance.code) {
+    return NextResponse.json(
+      { error: capMessage(allowance.code), code: allowance.code },
+      { status: 429 },
+    );
+  }
+  await recordRun(supabase, null);
 
   // RLS restricts this to the user's own projects.
   const { data: project } = await supabase

@@ -3,6 +3,7 @@ import Anthropic from "@anthropic-ai/sdk";
 import { createClient } from "@/lib/supabase/server";
 import { getUpcomingOpportunities } from "@/lib/opportunities";
 import { rankOpportunities } from "@/lib/match-opportunities";
+import { capMessage, checkGlobalAllowance, recordRun } from "@/lib/usage";
 
 export const runtime = "nodejs";
 export const maxDuration = 60;
@@ -23,6 +24,16 @@ export async function POST(req: Request) {
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
   }
+
+  // Beta budget guard (global backstop only on this legacy flow).
+  const allowance = await checkGlobalAllowance(supabase);
+  if (!allowance.allowed && allowance.code) {
+    return NextResponse.json(
+      { error: capMessage(allowance.code), code: allowance.code },
+      { status: 429 },
+    );
+  }
+  await recordRun(supabase, null);
 
   let body: { projectId?: unknown };
   try {

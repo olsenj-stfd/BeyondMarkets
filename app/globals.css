@@ -1446,6 +1446,18 @@ details.more[open] summary::before {
   margin-top: 12px;
 }
 
+.cap-card {
+  margin: 16px 0 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.cap-card p {
+  max-width: 560px;
+}
+
 .report-status a {
   color: var(--text-primary);
   word-break: break-all;

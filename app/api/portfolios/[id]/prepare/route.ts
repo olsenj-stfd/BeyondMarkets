@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { enrichCompany } from "@/lib/enrich";
 import { draftGraph } from "@/lib/graph";
 import { anthropicErrorResponse } from "@/lib/anthropic-error";
+import { capMessage, checkRunAllowance } from "@/lib/usage";
 import type { PortfolioCompany } from "@/lib/types";
 
 export const runtime = "nodejs";
@@ -65,6 +66,16 @@ export async function POST(
   const idx = companies.findIndex((c) => c.id === companyId);
   if (idx === -1) {
     return NextResponse.json({ error: "Company not found." }, { status: 404 });
+  }
+
+  // Beta budget guard: prepare spends tokens too (web search), so it checks
+  // the caps; the run itself is counted once, in /score.
+  const allowance = await checkRunAllowance(supabase, user.id);
+  if (!allowance.allowed && allowance.code) {
+    return NextResponse.json(
+      { error: capMessage(allowance.code), code: allowance.code },
+      { status: 429 },
+    );
   }
 
   const ac = new AbortController();

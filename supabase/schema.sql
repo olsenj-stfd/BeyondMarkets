@@ -195,6 +195,42 @@ create policy "own portfolios: delete" on public.portfolios
   for delete using (auth.uid() = user_id);
 
 -- ---------------------------------------------------------------------------
+-- Usage counters: beta budget guard. One row per counter key ('global' plus
+-- 'user:<uuid>'), incremented atomically via the security-definer function so
+-- signed-in sessions can bump counts without any table write policy. Caps are
+-- enforced in the API routes (lib/usage.ts). NOTE: until this migration runs,
+-- the guard fails open so the app keeps working — run it before sharing.
+-- ---------------------------------------------------------------------------
+
+create table if not exists public.usage_counters (
+  key text primary key,
+  count integer not null default 0,
+  updated_at timestamptz not null default now()
+);
+
+alter table public.usage_counters enable row level security;
+
+drop policy if exists "usage: read" on public.usage_counters;
+create policy "usage: read" on public.usage_counters
+  for select to authenticated using (true);
+
+create or replace function public.increment_usage(counter_key text)
+returns integer
+language sql
+security definer
+set search_path = public
+as $$
+  insert into public.usage_counters as u (key, count)
+  values (counter_key, 1)
+  on conflict (key) do update
+    set count = u.count + 1, updated_at = now()
+  returning count;
+$$;
+
+revoke execute on function public.increment_usage(text) from public, anon;
+grant execute on function public.increment_usage(text) to authenticated;
+
+-- ---------------------------------------------------------------------------
 -- Shared report snapshots: an immutable copy of a portfolio report behind an
 -- unguessable token, so a report can be sent as a clean public link. Public
 -- read is by exact primary-key token only — possession of the link is the

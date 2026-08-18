@@ -3,6 +3,11 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { csvToCompanies, namesToCompanies } from "@/lib/company-input";
 import { dependencyBand, reachBand } from "@/lib/bands";
+import {
+  ACCESS_REQUEST_MAILTO,
+  capMessage,
+  type RunCapCode,
+} from "@/lib/usage";
 import type {
   PortfolioCompany,
   RegClimate,
@@ -128,6 +133,7 @@ export default function PortfolioBoard({
   const [reportState, setReportState] = useState<
     { kind: "idle" } | { kind: "sending" } | { kind: "sent"; to: string } | { kind: "error"; message: string }
   >({ kind: "idle" });
+  const [capReached, setCapReached] = useState<RunCapCode | null>(null);
   const [shareState, setShareState] = useState<
     | { kind: "idle" }
     | { kind: "creating" }
@@ -150,6 +156,13 @@ export default function PortfolioBoard({
           });
           const data = await res.json().catch(() => ({}));
           if (!res.ok || !data.company) {
+            // Beta cap hit: stop the whole queue and show the limit card
+            // instead of painting every remaining company red.
+            if (data.code === "user_cap" || data.code === "global_cap") {
+              setCapReached(data.code as RunCapCode);
+              pendingRef.current = [];
+              return null;
+            }
             setErrors((e) => ({
               ...e,
               [companyId]: data.error ?? "Could not score this company.",
@@ -387,21 +400,25 @@ export default function PortfolioBoard({
           reasoning.
         </p>
         <div className="board-actions">
-          <button
-            type="button"
-            className="pill-btn ghost"
-            onClick={rescoreAll}
-            disabled={isBusy}
-          >
-            {isBusy ? "Scoring…" : "Re-score all ↺"}
-          </button>
-          <button
-            type="button"
-            className="pill-btn ghost"
-            onClick={() => setAddOpen((o) => !o)}
-          >
-            {addOpen ? "Close" : "+ Add companies"}
-          </button>
+          {!capReached && (
+            <>
+              <button
+                type="button"
+                className="pill-btn ghost"
+                onClick={rescoreAll}
+                disabled={isBusy}
+              >
+                {isBusy ? "Scoring…" : "Re-score all ↺"}
+              </button>
+              <button
+                type="button"
+                className="pill-btn ghost"
+                onClick={() => setAddOpen((o) => !o)}
+              >
+                {addOpen ? "Close" : "+ Add companies"}
+              </button>
+            </>
+          )}
           {/* "Email me this report" hidden until email delivery is fixed
               (Resend only delivers to the account owner without a verified
               domain). The endpoint + emailReport handler stay wired. */}
@@ -434,9 +451,23 @@ export default function PortfolioBoard({
         {shareState.kind === "error" && (
           <div className="error report-status">{shareState.message}</div>
         )}
+        {capReached && (
+          <div className="notice cap-card">
+            <p>
+              <strong>{capMessage(capReached)}</strong>{" "}
+              {capReached === "user_cap"
+                ? "RegScout is in beta and every run costs real compute, so runs are limited for now."
+                : "New runs are paused while we make room in the beta."}{" "}
+              Already-scored companies stay viewable and shareable.
+            </p>
+            <a className="pill-btn" href={ACCESS_REQUEST_MAILTO}>
+              Request more access
+            </a>
+          </div>
+        )}
       </section>
 
-      {addOpen && (
+      {addOpen && !capReached && (
         <section className="glass-card add-companies">
           <form onSubmit={addCompanies} className="portfolio-form">
             <div className="mode-tabs">
@@ -709,15 +740,17 @@ export default function PortfolioBoard({
                       {CLIMATE_LABEL[s.regClimate]}
                     </span>
                   )}
-                  <button
-                    type="button"
-                    className="link-btn"
-                    onClick={() => enqueue([c.id])}
-                    disabled={isScoring}
-                    title="Re-run the research and scoring for this company"
-                  >
-                    {isScoring ? "Running…" : "Re-run ↺"}
-                  </button>
+                  {!capReached && (
+                    <button
+                      type="button"
+                      className="link-btn"
+                      onClick={() => enqueue([c.id])}
+                      disabled={isScoring}
+                      title="Re-run the research and scoring for this company"
+                    >
+                      {isScoring ? "Running…" : "Re-run ↺"}
+                    </button>
+                  )}
                 </div>
               </div>
 

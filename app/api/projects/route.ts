@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { suggestProjectName } from "@/lib/match";
+import { capMessage, checkGlobalAllowance } from "@/lib/usage";
 import type {
   Consideration,
   EnrichedMatch,
@@ -63,6 +64,16 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) {
     return NextResponse.json({ error: "Not signed in." }, { status: 401 });
+  }
+
+  // Beta budget guard: check-only (project creation itself is a tiny call;
+  // the expensive legacy endpoints count runs).
+  const allowance = await checkGlobalAllowance(supabase);
+  if (!allowance.allowed && allowance.code) {
+    return NextResponse.json(
+      { error: capMessage(allowance.code), code: allowance.code },
+      { status: 429 },
+    );
   }
 
   let body: {
