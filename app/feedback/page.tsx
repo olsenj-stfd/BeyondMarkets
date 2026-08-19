@@ -15,6 +15,7 @@ const CATEGORIES = [
 export default function FeedbackPage() {
   const [category, setCategory] = useState(CATEGORIES[0]);
   const [message, setMessage] = useState("");
+  const [email, setEmail] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sent, setSent] = useState(false);
@@ -27,7 +28,7 @@ export default function FeedbackPage() {
       const res = await fetch("/api/feedback", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ category, message }),
+        body: JSON.stringify({ category, message, email }),
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -86,6 +87,17 @@ export default function FeedbackPage() {
                   </option>
                 ))}
               </select>
+            </label>
+
+            <label className="field">
+              <span>Email (optional, if you&apos;d like a reply)</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                placeholder="you@foundation.org"
+                autoComplete="email"
+              />
             </label>
 
             <label className="field">

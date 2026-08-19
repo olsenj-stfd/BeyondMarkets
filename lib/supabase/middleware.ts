@@ -44,6 +44,9 @@ export async function updateSession(request: NextRequest) {
   const isPublic =
     pathname === "/login" ||
     pathname === "/about" ||
+    // Feedback works signed-out too — the login page links to it, and people
+    // stuck at login are exactly who should be able to reach it.
+    pathname === "/feedback" ||
     pathname.startsWith("/auth") ||
     pathname.startsWith("/api") ||
     // Shared report snapshots: the unguessable token is the credential.

@@ -154,6 +154,12 @@ drop policy if exists "feedback: insert own" on public.feedback;
 create policy "feedback: insert own" on public.feedback
   for insert with check (auth.uid() = user_id);
 
+-- Signed-out visitors can submit too (the login page links to the feedback
+-- form). Anonymous rows carry no user_id and at most a self-reported email.
+drop policy if exists "feedback: insert anon" on public.feedback;
+create policy "feedback: insert anon" on public.feedback
+  for insert to anon with check (user_id is null);
+
 drop policy if exists "feedback: select own" on public.feedback;
 create policy "feedback: select own" on public.feedback
   for select using (auth.uid() = user_id);

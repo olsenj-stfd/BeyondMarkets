@@ -5,17 +5,18 @@ export const runtime = "nodejs";
 
 const MAX_MESSAGE = 5000;
 
-/** Store a beta tester's feedback, attributed to the signed-in user. */
+/**
+ * Store a beta tester's feedback. Attributed to the signed-in user when there
+ * is one; anonymous submissions are allowed (the login page links here, and
+ * someone stuck at login still needs a channel) with an optional reply email.
+ */
 export async function POST(req: Request) {
   const supabase = await createClient();
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) {
-    return NextResponse.json({ error: "Not signed in." }, { status: 401 });
-  }
 
-  let body: { message?: unknown; category?: unknown };
+  let body: { message?: unknown; category?: unknown; email?: unknown };
   try {
     body = await req.json();
   } catch {
@@ -32,10 +33,12 @@ export async function POST(req: Request) {
   }
   const category =
     typeof body.category === "string" ? body.category.trim().slice(0, 80) : null;
+  const providedEmail =
+    typeof body.email === "string" ? body.email.trim().slice(0, 200) : "";
 
   const { error } = await supabase.from("feedback").insert({
-    user_id: user.id,
-    email: user.email ?? null,
+    user_id: user?.id ?? null,
+    email: user?.email ?? (providedEmail || null),
     category,
     message,
   });
