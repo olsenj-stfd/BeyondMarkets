@@ -56,7 +56,7 @@ export async function POST(
 
   const appUrl = process.env.NEXT_PUBLIC_SITE_URL
     ? `${process.env.NEXT_PUBLIC_SITE_URL}/portfolios/${portfolio.id}`
-    : `https://beyond-markets.vercel.app/portfolios/${portfolio.id}`;
+    : `https://regscout.com/portfolios/${portfolio.id}`;
   const { subject, html } = buildPortfolioReport(
     portfolio.name,
     companies,
