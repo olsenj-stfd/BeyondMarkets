@@ -30,7 +30,7 @@ export default async function SharedReportPage({
     .single();
   if (!data) notFound();
 
-  const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://regscout.com";
+  const appUrl = process.env.NEXT_PUBLIC_SITE_URL ?? "https://theregscout.com";
   const body = buildPortfolioReportBody(
     data.portfolio_name,
     (data.companies ?? []) as PortfolioCompany[],
